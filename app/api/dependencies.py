@@ -12,7 +12,7 @@ from ..db.redis_client import redis_client
 from ..schemas.auth import TokenPayload
 
 oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl=f"{settings.API_V1_PREFIX}/auth/login/oauth2"
+    tokenUrl=f"{settings.API_PREFIX}/auth/login/oauth2"
 )
 
 

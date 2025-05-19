@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Chart.Name }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: {{ .Chart.Name }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: 0
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Chart.Name }}
+    spec:
+      nodeSelector:
+        "kubernetes.io/os": linux
+        "kubernetes.io/hostname": ruo-server1
+      containers:
+      - name: {{ .Chart.Name }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        - containerPort: 8000
+        resources:
+          requests:
+            cpu: 1
+            memory: 2Gi
+          limits:
+            cpu: 2
+            memory: 4Gi
+        env:
+        - name: APP_NAME
+          value: {{ .Values.appName }}
+        - name: API_PREFIX
+          value: {{ .Values.apiPrefix }}
+        - name: ENVIRONMENT
+          value: {{ .Values.environment }}
+        - name: BACKEND_CORS_ORIGINS
+          value: {{ .Values.backendCorsOrigins }}
+        - name: MONGODB_MAX_POOL_SIZE
+          value: "{{ .Values.mongodbMaxPoolSize }}"
+        - name: MONGODB_MIN_POOL_SIZE
+          value: "{{ .Values.mongodbMinPoolSize }}"
+        - name: MONGODB_URI
+          value: {{ .Values.mongodbUri }}
+        - name: DATABASE_NAME
+          value: {{ .Values.databaseName }}
+        - name: REDIS_HOST
+          value: {{ .Values.redisHost }}
+        - name: REDIS_PORT
+          value: {{ .Values.redisPort }}
+        - name: REDIS_DB
+          value: {{ .Values.redisDb }}
+        - name: REDIS_PASSWORD
+          value: {{ .Values.redisPassword }}
+        - name: SECRET_KEY
+          value: {{ .Values.secretKey }}
+        - name: ALGORITHM
+          value: {{ .Values.algorithm }}
+        - name: ACCESS_TOKEN_EXPIRE_MINUTES
+          value: "{{ .Values.accessTokenExpireMinutes }}"
+        - name: REFRESH_TOKEN_EXPIRE_DAYS
+          value: "{{ .Values.refreshTokenExpireDays }}"
+        - name: GOOGLE_CLIENT_ID
+          value: {{ .Values.googleClientId }}
+        - name: GOOGLE_CLIENT_SECRET
+          value: {{ .Values.googleClientSecret }}
+        - name: KAKAO_CLIENT_ID
+          value: {{ .Values.kakaoClientId }}
+        - name: KAKAO_CLIENT_SECRET
+          value: {{ .Values.kakaoClientSecret }}
+        - name: NAVER_CLIENT_ID
+          value: {{ .Values.naverClientId }}
+        - name: NAVER_CLIENT_SECRET
+          value: {{ .Values.naverClientSecret }}
+        - name: LOG_LEVEL
+          value: {{ .Values.logLevel }}

@@ -7,11 +7,11 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     # 애플리케이션 설정
     APP_NAME: str = "TOEIC4ALL Auth API"
-    API_V1_PREFIX: str = "/api/v1"
+    API_PREFIX: str = "/api/v1"
     BACKEND_CORS_ORIGINS: List[str] = ["*"]
 
     # MongoDB 설정
-    MONGODB_URL: str
+    MONGODB_URI: str
     MONGODB_NAME: str = "toeic4all_users"
 
     # Redis 설정 (토큰 저장 및 블랙리스트 관리)

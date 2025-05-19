@@ -1,0 +1,40 @@
+# Default values for retriever.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+namespace: toeic4all
+
+replicaCount: 1
+
+image:
+  repository: 192.168.0.5:5000/toeic4all-auth-server
+  pullPolicy: IfNotPresent
+  tag: ""
+
+service:
+  type: LoadBalancer
+  port: 80
+
+appName: "TOEIC4ALL Auth API"
+apiPrefix: "/api/v1"
+environment: "production"
+backendCorsOrigins: ""
+mongodbUri: ""
+# mongodbMaxPoolSize: "100"
+# mongodbMinPoolSize: "10"
+databaseName: "toeic4all_users"
+redisHost: ""
+redisPort: ""
+redisDb: ""
+redisPassword: ""
+secretKey: ""
+algorithm: ""
+accessTokenExpireMinutes: "30"
+refreshTokenExpireDays: "7"
+googleClientId: ""
+googleClientSecret: ""
+kakaoClientId: ""
+kakaoClientSecret: ""
+naverClientId: ""
+naverClientSecret: ""
+logLevel: "INFO"

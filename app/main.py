@@ -12,9 +12,9 @@ from .utils.logger import logger
 
 app = FastAPI(
     title=settings.APP_NAME,
-    openapi_url=f"{settings.API_V1_PREFIX}/openapi.json",
-    docs_url=f"{settings.API_V1_PREFIX}/docs",
-    redoc_url=f"{settings.API_V1_PREFIX}/redoc",
+    openapi_url=f"{settings.API_PREFIX}/openapi.json",
+    docs_url=f"{settings.API_PREFIX}/docs",
+    redoc_url=f"{settings.API_PREFIX}/redoc",
 )
 
 # CORS 미들웨어 설정
@@ -27,9 +27,9 @@ app.add_middleware(
 )
 
 # 라우터 등록
-app.include_router(auth.router, prefix=f"{settings.API_V1_PREFIX}/auth", tags=["인증"])
+app.include_router(auth.router, prefix=f"{settings.API_PREFIX}/auth", tags=["인증"])
 app.include_router(
-    social.router, prefix=f"{settings.API_V1_PREFIX}/auth/social", tags=["소셜 로그인"]
+    social.router, prefix=f"{settings.API_PREFIX}/auth/social", tags=["소셜 로그인"]
 )
 
 
@@ -75,7 +75,7 @@ async def shutdown_db_client():
 
 
 # 상태 확인 엔드포인트
-@app.get(f"{settings.API_V1_PREFIX}/health", tags=["시스템"])
+@app.get(f"{settings.API_PREFIX}/health", tags=["시스템"])
 async def health_check():
     return {"status": "online", "api": "toeic4all-auth-server", "version": "0.1.0"}
 
