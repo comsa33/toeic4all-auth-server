@@ -6,10 +6,10 @@ from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 
-from ..core.config import settings
-from ..db.mongodb import mongodb
-from ..db.redis_client import redis_client
-from ..schemas.auth import TokenPayload
+from app.core.config import settings
+from app.db.mongodb import mongodb
+from app.db.redis_client import redis_client
+from app.schemas.auth import TokenPayload
 
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_PREFIX}/auth/login/oauth2"

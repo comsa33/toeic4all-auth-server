@@ -4,17 +4,17 @@ from typing import Any, Dict, Optional, Tuple
 from bson.objectid import ObjectId
 from fastapi import HTTPException, status
 
-from ..core.config import settings
-from ..core.security import (
+from app.core.config import settings
+from app.core.security import (
     create_access_token,
     create_refresh_token,
     get_password_hash,
     verify_password,
 )
-from ..db.mongodb import mongodb
-from ..db.redis_client import redis_client
-from ..models.user import UserModel
-from ..utils.logger import logger
+from app.db.mongodb import mongodb
+from app.db.redis_client import redis_client
+from app.models.user import UserModel
+from app.utils.logger import logger
 
 
 async def authenticate_user(

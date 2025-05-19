@@ -4,14 +4,16 @@ import uuid
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from .api import auth, social
-from .core.config import settings
-from .db.mongodb import mongodb
-from .db.redis_client import redis_client
-from .utils.logger import logger
+from app.api import auth, social
+from app.core.config import settings
+from app.db.mongodb import mongodb
+from app.db.redis_client import redis_client
+from app.utils.logger import logger
 
 app = FastAPI(
     title=settings.APP_NAME,
+    description="TOEIC4ALL 인증 API",
+    version="0.0.1",
     openapi_url=f"{settings.API_PREFIX}/openapi.json",
     docs_url=f"{settings.API_PREFIX}/docs",
     redoc_url=f"{settings.API_PREFIX}/redoc",

@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, Query, Request
 
-from ..api.dependencies import get_user_ip_and_device_info
-from ..schemas.auth import LoginResponse
-from ..services.social_service import (
+from app.api.dependencies import get_user_ip_and_device_info
+from app.schemas.auth import LoginResponse
+from app.services.social_service import (
     handle_google_login,
     handle_kakao_login,
     handle_naver_login,

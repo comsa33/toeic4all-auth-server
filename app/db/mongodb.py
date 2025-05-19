@@ -3,8 +3,8 @@ from typing import Any, Dict
 from pymongo import AsyncMongoClient
 from pymongo.database import Database
 
-from ..core.config import settings
-from ..utils.logger import logger
+from app.core.config import settings
+from app.utils.logger import logger
 
 
 class MongoDB:

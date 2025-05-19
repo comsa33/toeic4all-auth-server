@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 
-from ..api.dependencies import get_user_ip_and_device_info
-from ..schemas.auth import (
+from app.api.dependencies import get_user_ip_and_device_info
+from app.schemas.auth import (
     ChangePasswordRequest,
     LoginRequest,
     LoginResponse,
@@ -11,8 +11,8 @@ from ..schemas.auth import (
     RefreshTokenRequest,
     Token,
 )
-from ..schemas.user import UserCreate, UserResponse
-from ..services.auth_service import (
+from app.schemas.user import UserCreate, UserResponse
+from app.services.auth_service import (
     authenticate_user,
     create_user,
     logout_user,
@@ -118,7 +118,7 @@ async def logout(
     """사용자 로그아웃 및 토큰 무효화"""
     from jose import JWTError, jwt
 
-    from ..core.config import settings
+    from app.core.config import settings
 
     ip_address, device_info = ip_and_device
 

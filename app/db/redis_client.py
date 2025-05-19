@@ -1,7 +1,7 @@
 import redis
 
-from ..core.config import settings
-from ..utils.logger import logger
+from app.core.config import settings
+from app.utils.logger import logger
 
 
 class RedisClient:
@@ -15,7 +15,7 @@ class RedisClient:
                 host=settings.REDIS_HOST,
                 port=settings.REDIS_PORT,
                 db=settings.REDIS_DB,
-                password=settings.REDIS_PASSWORD,
+                # password=settings.REDIS_PASSWORD,
                 decode_responses=True,
             )
             ping = self.client.ping()

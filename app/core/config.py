@@ -1,14 +1,18 @@
+import json
 from typing import List, Optional
 
-from pydantic import validator
-from pydantic_settings import BaseSettings
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     # 애플리케이션 설정
     APP_NAME: str = "TOEIC4ALL Auth API"
     API_PREFIX: str = "/api/v1"
-    BACKEND_CORS_ORIGINS: List[str] = ["*"]
+
+    # Read BACKEND_CORS_ORIGINS from .env as a raw string
+    # The alias ensures it still reads the 'BACKEND_CORS_ORIGINS' env variable
+    BACKEND_CORS_ORIGINS_RAW: str = Field(default="*", alias="BACKEND_CORS_ORIGINS")
 
     # MongoDB 설정
     MONGODB_URI: str
@@ -39,17 +43,35 @@ class Settings(BaseSettings):
     # 로깅 설정
     LOG_LEVEL: str = "INFO"
 
-    @validator("BACKEND_CORS_ORIGINS", pre=True)
-    def assemble_cors_origins(cls, v: str | List[str]) -> List[str]:
-        if isinstance(v, str) and not v.startswith("["):
-            return [i.strip() for i in v.split(",")]
-        elif isinstance(v, (list, str)):
-            return v
-        raise ValueError(v)
+    # Define BACKEND_CORS_ORIGINS as a property that parses the raw string
+    @property
+    def BACKEND_CORS_ORIGINS(self) -> List[str]:
+        v = self.BACKEND_CORS_ORIGINS_RAW
 
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
+        # Check if the string is intended to be a JSON array
+        if v.startswith("[") and v.endswith("]"):
+            try:
+                data = json.loads(v)  # Attempt to parse as JSON
+                if isinstance(data, list) and all(isinstance(s, str) for s in data):
+                    return data  # Successfully parsed as list of strings
+                else:
+                    # Parsed as JSON, but not a list of strings (e.g., list of ints, or a dict)
+                    raise ValueError(
+                        f"BACKEND_CORS_ORIGINS env var '{v}' looks like JSON array but is not a list of strings."
+                    )
+            except json.JSONDecodeError as e:
+                # Starts and ends with [], but not valid JSON (e.g. "['foo']" or "[foo,bar]")
+                raise ValueError(
+                    f"BACKEND_CORS_ORIGINS env var '{v}' looks like JSON array but is malformed: {e}"
+                )
+        else:
+            # Not a JSON array string, treat as comma-separated.
+            # Handles "*", "foo", "foo,bar"
+            # This will return [''] for an empty string v="", and ['foo'] for v="foo"
+            return [item.strip() for item in v.split(",")]
+
+    # Use model_config for Pydantic v2 settings
+    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True)
 
 
 settings = Settings()
