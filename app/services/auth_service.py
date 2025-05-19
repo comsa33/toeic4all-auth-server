@@ -1,4 +1,4 @@
-from datetime import datetime
+import datetime
 from typing import Any, Dict, Optional, Tuple
 
 from bson.objectid import ObjectId
@@ -77,7 +77,12 @@ async def authenticate_user(
     # 사용자 정보 업데이트 (마지막 로그인 시간, 리프레시 토큰)
     await users_collection.update_one(
         {"_id": user["_id"]},
-        {"$set": {"last_login": datetime.utcnow(), "refresh_token": refresh_token}},
+        {
+            "$set": {
+                "last_login": datetime.datetime.now(datetime.timezone.utc),
+                "refresh_token": refresh_token,
+            }
+        },
     )
 
     # 인증 성공 로그 기록
@@ -152,7 +157,7 @@ async def refresh_access_token(refresh_token: str) -> Tuple[str, str]:
             options={"verify_exp": False},
         )
         exp = jwt_payload.get("exp", 0)
-        current_timestamp = datetime.utcnow().timestamp()
+        current_timestamp = datetime.datetime.now(datetime.timezone.utc).timestamp()
         ttl = max(0, int(exp - current_timestamp))
 
         if ttl > 0:
@@ -195,7 +200,7 @@ async def logout_user(
                 options={"verify_exp": False},
             )
             exp = jwt_payload.get("exp", 0)
-            current_timestamp = datetime.utcnow().timestamp()
+            current_timestamp = datetime.datetime.now(datetime.timezone.utc).timestamp()
             ttl = max(0, int(exp - current_timestamp))
 
             if ttl > 0:
@@ -262,20 +267,21 @@ async def create_user(
             "part6_total": 0,
             "part7_correct": 0,
             "part7_total": 0,
-            "last_activity": None,
+            "last_activity": datetime.datetime.now(datetime.timezone.utc),
             "streak_days": 0,
         },
         "subscription": {
             "plan": "free",
-            "start_date": datetime.utcnow(),
-            "end_date": None,
+            "start_date": datetime.datetime.now(datetime.timezone.utc),
+            "end_date": datetime.datetime.now(datetime.timezone.utc)
+            + datetime.timedelta(days=30),
             "is_active": True,
-            "payment_id": None,
+            "payment_id": "",
         },
-        "created_at": datetime.utcnow(),
-        "updated_at": None,
-        "last_login": None,
-        "refresh_token": None,
+        "created_at": datetime.datetime.now(datetime.timezone.utc),
+        "updated_at": datetime.datetime.now(datetime.timezone.utc),
+        "last_login": datetime.datetime.now(datetime.timezone.utc),
+        "refresh_token": "",
         "is_active": True,
         "role": "user",
         "social_connections": {},
@@ -316,7 +322,7 @@ async def log_auth_event(
         "user_id": user_id,
         "username": username,
         "event_type": event_type,
-        "timestamp": datetime.utcnow(),
+        "timestamp": datetime.datetime.now(datetime.timezone.utc),
         "ip_address": ip_address,
         "device_info": device_info,
         "status": status,

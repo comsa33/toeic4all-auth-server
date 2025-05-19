@@ -1,5 +1,6 @@
 import time
 import uuid
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,6 +11,21 @@ from app.db.mongodb import mongodb
 from app.db.redis_client import redis_client
 from app.utils.logger import logger
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # 시작 시 실행
+    await mongodb.connect_to_mongo()
+    redis_client.connect_to_redis()
+    logger.info("Application startup complete")
+
+    yield  # 애플리케이션 실행 중
+
+    # 종료 시 실행
+    await mongodb.close_mongo_connection()
+    logger.info("Application shutdown complete")
+
+
 app = FastAPI(
     title=settings.APP_NAME,
     description="TOEIC4ALL 인증 API",
@@ -17,6 +33,7 @@ app = FastAPI(
     openapi_url=f"{settings.API_PREFIX}/openapi.json",
     docs_url=f"{settings.API_PREFIX}/docs",
     redoc_url=f"{settings.API_PREFIX}/redoc",
+    lifespan=lifespan,  # 라이프스팬 이벤트 핸들러 등록
 )
 
 # CORS 미들웨어 설정
@@ -59,21 +76,6 @@ async def log_requests(request: Request, call_next):
     except Exception as e:
         logger.error(f"Request {request_id} failed: {str(e)}")
         raise
-
-
-# 애플리케이션 시작 이벤트
-@app.on_event("startup")
-async def startup_db_client():
-    await mongodb.connect_to_mongo()
-    redis_client.connect_to_redis()
-    logger.info("Application startup complete")
-
-
-# 애플리케이션 종료 이벤트
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    await mongodb.close_mongo_connection()
-    logger.info("Application shutdown complete")
 
 
 # 상태 확인 엔드포인트
