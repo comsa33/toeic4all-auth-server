@@ -81,7 +81,7 @@ async def register(
     """새 사용자 등록"""
     ip_address, device_info = ip_and_device
     user = await create_user(
-        user_data=user_data.dict(exclude={"confirm_password"}),
+        user_data=user_data.model_dump(exclude={"confirm_password"}),
         ip_address=ip_address,
         device_info=device_info,
     )
@@ -90,7 +90,7 @@ async def register(
         id=str(user.id),
         username=user.username,
         email=user.email,
-        profile=user.profile,
+        profile=user.profile.model_dump(),
         role=user.role,
         created_at=user.created_at,
         updated_at=user.updated_at,

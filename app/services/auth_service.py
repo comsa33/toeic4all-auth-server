@@ -324,11 +324,14 @@ async def log_auth_event(
         "event_type": event_type,
         "timestamp": datetime.datetime.now(datetime.timezone.utc),
         "ip_address": ip_address,
-        "device_info": device_info,
+        "device_info": {
+            **device_info,
+            "app_version": device_info.get("app_version") or "",
+        },
         "status": status,
-        "failure_reason": failure_reason,
+        "failure_reason": failure_reason or "",
         "details": details or {},
-        "session_id": session_id,
+        "session_id": session_id or "",
     }
 
     try:

@@ -1,24 +1,21 @@
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Annotated, Any, Dict, Optional
 
 from bson import ObjectId
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, BeforeValidator, EmailStr, Field
 
 
-class PyObjectId(ObjectId):
-    @classmethod
-    def __get_validators__(cls):
-        yield cls.validate
-
-    @classmethod
-    def validate(cls, v):
-        if not ObjectId.is_valid(v):
-            raise ValueError("유효하지 않은 ObjectId")
+# 간단한 방식으로 ObjectId 처리
+def validate_object_id(v: Any) -> ObjectId:
+    if isinstance(v, ObjectId):
+        return v
+    if isinstance(v, str) and ObjectId.is_valid(v):
         return ObjectId(v)
+    raise ValueError("올바른 ObjectId가 아닙니다")
 
-    @classmethod
-    def __get_pydantic_json_schema__(cls, field_schema):
-        field_schema.update(type="string")
+
+# Pydantic v2 스타일로 타입 정의
+PyObjectId = Annotated[ObjectId, BeforeValidator(validate_object_id)]
 
 
 class UserProfileModel(BaseModel):
@@ -48,7 +45,7 @@ class UserStatsModel(BaseModel):
 
 
 class UserModel(BaseModel):
-    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+    id: PyObjectId = Field(default_factory=ObjectId, alias="_id")
     username: str
     email: EmailStr
     password_hash: str
@@ -61,11 +58,10 @@ class UserModel(BaseModel):
     refresh_token: Optional[str] = None
     is_active: bool = True
     role: str = "user"
-
-    # 소셜 로그인 정보
     social_connections: Dict = Field(default_factory=dict)
 
-    class Config:
-        validate_by_name = True
-        arbitrary_types_allowed = True
-        json_encoders = {ObjectId: str}
+    model_config = {
+        "arbitrary_types_allowed": True,
+        "populate_by_name": True,
+        "json_encoders": {ObjectId: str},
+    }
