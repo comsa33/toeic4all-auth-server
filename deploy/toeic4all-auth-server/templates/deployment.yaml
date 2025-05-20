@@ -55,8 +55,6 @@ spec:
           value: {{ .Values.redisPort }}
         - name: REDIS_DB
           value: {{ .Values.redisDb }}
-        - name: REDIS_PASSWORD
-          value: {{ .Values.redisPassword }}
         - name: SECRET_KEY
           value: {{ .Values.secretKey }}
         - name: ALGORITHM
