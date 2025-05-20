@@ -10,5 +10,6 @@ wheels/
 .venv
 .env.example
 .env
+.vscode/
 
 tests/
