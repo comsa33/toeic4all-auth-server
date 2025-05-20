@@ -1,7 +1,8 @@
+import datetime
 import secrets
 import string
-from datetime import datetime
 from typing import Any, Dict, Tuple
+from urllib.parse import unquote
 
 import httpx
 from fastapi import HTTPException, status
@@ -26,7 +27,7 @@ async def handle_google_login(
     # 액세스 토큰 획득
     token_url = "https://oauth2.googleapis.com/token"
     token_data = {
-        "code": code,
+        "code": unquote(code),
         "client_id": settings.GOOGLE_CLIENT_ID,
         "client_secret": settings.GOOGLE_CLIENT_SECRET,
         "redirect_uri": redirect_uri,
@@ -81,7 +82,7 @@ async def handle_kakao_login(
         "grant_type": "authorization_code",
         "client_id": settings.KAKAO_CLIENT_ID,
         "client_secret": settings.KAKAO_CLIENT_SECRET,
-        "code": code,
+        "code": unquote(code),
         "redirect_uri": redirect_uri,
     }
 
@@ -136,7 +137,7 @@ async def handle_naver_login(
         "grant_type": "authorization_code",
         "client_id": settings.NAVER_CLIENT_ID,
         "client_secret": settings.NAVER_CLIENT_SECRET,
-        "code": code,
+        "code": unquote(code),
         "redirect_uri": redirect_uri,
     }
 
@@ -211,9 +212,9 @@ async def process_social_login(
                 "$set": {
                     f"social_connections.{provider}": {
                         "id": provider_user_id,
-                        "last_login": datetime.utcnow(),
+                        "last_login": datetime.datetime.now(datetime.timezone.utc),
                     },
-                    "last_login": datetime.utcnow(),
+                    "last_login": datetime.datetime.now(datetime.timezone.utc),
                 }
             },
         )
@@ -239,7 +240,7 @@ async def process_social_login(
             "profile": {
                 "full_name": name,
                 "profile_image": profile_image,
-                "bio": None,
+                "bio": "",  # None 대신 빈 문자열 사용
                 "preferences": {
                     "notification_enabled": True,
                     "theme": "light",
@@ -253,24 +254,32 @@ async def process_social_login(
                 "part6_total": 0,
                 "part7_correct": 0,
                 "part7_total": 0,
-                "last_activity": None,
+                "last_activity": datetime.datetime.now(
+                    datetime.timezone.utc
+                ),  # None 대신 현재 시간 사용
                 "streak_days": 0,
             },
             "subscription": {
                 "plan": "free",
-                "start_date": datetime.utcnow(),
-                "end_date": None,
+                "start_date": datetime.datetime.now(datetime.timezone.utc),
+                "end_date": datetime.datetime.now(datetime.timezone.utc)
+                + datetime.timedelta(days=30),  # None 대신 30일 후 날짜 사용
                 "is_active": True,
-                "payment_id": None,
+                "payment_id": "",  # None 대신 빈 문자열 사용
             },
-            "created_at": datetime.utcnow(),
-            "updated_at": None,
-            "last_login": datetime.utcnow(),
-            "refresh_token": None,
+            "created_at": datetime.datetime.now(datetime.timezone.utc),
+            "updated_at": datetime.datetime.now(
+                datetime.timezone.utc
+            ),  # None 대신 현재 시간 사용
+            "last_login": datetime.datetime.now(datetime.timezone.utc),
+            "refresh_token": "",  # None 대신 빈 문자열 사용
             "is_active": True,
             "role": "user",
             "social_connections": {
-                provider: {"id": provider_user_id, "last_login": datetime.utcnow()}
+                provider: {
+                    "id": provider_user_id,
+                    "last_login": datetime.datetime.now(datetime.timezone.utc),
+                }
             },
         }
 
