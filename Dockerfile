@@ -33,4 +33,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/api/v1/health || exit 1
 
 # 애플리케이션 실행
-CMD ["uv", "run", "-m", "app.main:app"]
+CMD ["uv", "run", "-m", "app.main"]
