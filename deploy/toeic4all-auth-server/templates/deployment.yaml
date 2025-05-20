@@ -40,7 +40,7 @@ spec:
         - name: ENVIRONMENT
           value: {{ .Values.environment }}
         - name: BACKEND_CORS_ORIGINS
-          value: {{ .Values.backendCorsOrigins }}
+          value: {{ .Values.backendCorsOrigins | quote }}
         - name: MONGODB_MAX_POOL_SIZE
           value: "{{ .Values.mongodbMaxPoolSize }}"
         - name: MONGODB_MIN_POOL_SIZE
