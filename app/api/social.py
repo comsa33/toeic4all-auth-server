@@ -70,6 +70,7 @@ async def naver_login(
     request: Request,
     code: str = Query(..., description="Naver에서 반환된 인증 코드"),
     redirect_uri: str = Query(..., description="리디렉션 URI"),
+    state: str = Query(..., description="상태 문자열"),  # state 매개변수 추가
     ip_and_device: tuple = Depends(get_user_ip_and_device_info),
 ):
     """Naver 소셜 로그인"""
@@ -77,6 +78,7 @@ async def naver_login(
     user, access_token, refresh_token = await handle_naver_login(
         code=code,
         redirect_uri=redirect_uri,
+        state=state,  # state 파라미터 전달
         ip_address=ip_address,
         device_info=device_info,
     )

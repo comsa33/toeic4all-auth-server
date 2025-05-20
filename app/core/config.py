@@ -34,7 +34,6 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_SECRET: Optional[str] = None
 
     KAKAO_CLIENT_ID: Optional[str] = None
-    KAKAO_CLIENT_SECRET: Optional[str] = None
 
     NAVER_CLIENT_ID: Optional[str] = None
     NAVER_CLIENT_SECRET: Optional[str] = None

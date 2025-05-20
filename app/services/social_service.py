@@ -81,7 +81,6 @@ async def handle_kakao_login(
     token_data = {
         "grant_type": "authorization_code",
         "client_id": settings.KAKAO_CLIENT_ID,
-        "client_secret": settings.KAKAO_CLIENT_SECRET,
         "code": unquote(code),
         "redirect_uri": redirect_uri,
     }
@@ -128,7 +127,11 @@ async def handle_kakao_login(
 
 
 async def handle_naver_login(
-    code: str, redirect_uri: str, ip_address: str, device_info: Dict[str, Any]
+    code: str,
+    redirect_uri: str,
+    state: str,
+    ip_address: str,
+    device_info: Dict[str, Any],
 ) -> Tuple[UserModel, str, str]:
     """Naver OAuth 로그인 처리"""
     # 액세스 토큰 획득
@@ -137,8 +140,9 @@ async def handle_naver_login(
         "grant_type": "authorization_code",
         "client_id": settings.NAVER_CLIENT_ID,
         "client_secret": settings.NAVER_CLIENT_SECRET,
-        "code": unquote(code),
+        "code": code,
         "redirect_uri": redirect_uri,
+        "state": state,  # state 매개변수 추가
     }
 
     async with httpx.AsyncClient() as client:

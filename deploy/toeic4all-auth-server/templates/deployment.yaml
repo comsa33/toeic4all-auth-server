@@ -69,8 +69,6 @@ spec:
           value: {{ .Values.googleClientSecret }}
         - name: KAKAO_CLIENT_ID
           value: {{ .Values.kakaoClientId }}
-        - name: KAKAO_CLIENT_SECRET
-          value: {{ .Values.kakaoClientSecret }}
         - name: NAVER_CLIENT_ID
           value: {{ .Values.naverClientId }}
         - name: NAVER_CLIENT_SECRET
