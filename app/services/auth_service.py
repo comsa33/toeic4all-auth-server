@@ -495,7 +495,8 @@ async def authenticate_user(
 
     # 로그인 성공 시 login_attempts 초기화
     await users_collection.update_one(
-        {"_id": user["_id"]}, {"$set": {"login_attempts": 0, "last_failed_login": None}}
+        {"_id": user["_id"]},
+        {"$set": {"login_attempts": 0}, "$unset": {"last_failed_login": ""}},
     )
 
     # 액세스 토큰 및 리프레시 토큰 생성

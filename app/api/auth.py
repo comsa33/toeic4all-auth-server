@@ -254,6 +254,14 @@ async def change_password_endpoint(
     ip_and_device: tuple = Depends(get_user_ip_and_device_info),
 ):
     """비밀번호 변경"""
+    # 소셜 로그인 사용자 확인 및 제한 추가
+    has_social_connections = bool(current_user.get("social_connections", {}))
+    if has_social_connections:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="소셜 로그인 사용자는 비밀번호를 변경할 수 없습니다.",
+        )
+
     ip_address, device_info = ip_and_device
 
     if password_data.new_password != password_data.confirm_password:

@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+import datetime
 from typing import Any, Optional, Union
 
 from jose import jwt
@@ -10,13 +10,15 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def create_access_token(
-    subject: Union[str, Any], role: str, expires_delta: Optional[timedelta] = None
+    subject: Union[str, Any],
+    role: str,
+    expires_delta: Optional[datetime.timedelta] = None,
 ) -> str:
     """액세스 토큰을 생성합니다."""
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.datetime.now(datetime.timezone.utc) + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(
+        expire = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(
             minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
         )
 
@@ -28,13 +30,17 @@ def create_access_token(
 
 
 def create_refresh_token(
-    subject: Union[str, Any], role: str, expires_delta: Optional[timedelta] = None
+    subject: Union[str, Any],
+    role: str,
+    expires_delta: Optional[datetime.timedelta] = None,
 ) -> str:
     """리프레시 토큰을 생성합니다."""
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.datetime.now(datetime.timezone.utc) + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+        expire = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(
+            days=settings.REFRESH_TOKEN_EXPIRE_DAYS
+        )
 
     to_encode = {
         "exp": expire,

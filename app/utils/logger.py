@@ -1,7 +1,7 @@
+import datetime
 import logging
 import os
 import sys
-from datetime import datetime
 from pathlib import Path
 
 from app.core.config import settings
@@ -43,7 +43,7 @@ def setup_logger():
         log_dir.mkdir(exist_ok=True)
 
         # 날짜별 로그 파일
-        today = datetime.now().strftime("%Y-%m-%d")
+        today = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
         log_file = log_dir / f"toeic4all-auth-{today}.log"
 
         # 파일 핸들러 설정

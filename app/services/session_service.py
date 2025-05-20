@@ -1,6 +1,9 @@
+import datetime
+import json
 import uuid
-from datetime import datetime, timedelta
 from typing import Dict, List, Optional
+
+from jose import jwt
 
 from app.core.config import settings
 from app.db.redis_client import redis_client
@@ -17,14 +20,16 @@ async def create_session(
 ) -> str:
     """새로운 세션 생성 및 Redis에 저장"""
     session_id = str(uuid.uuid4())
-    expires_at = datetime.now() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    expires_at = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(
+        days=settings.REFRESH_TOKEN_EXPIRE_DAYS
+    )
 
     session = SessionModel(
         session_id=session_id,
         user_id=user_id,
         device_info=device_info,
         ip_address=ip_address,
-        login_time=datetime.now(),
+        login_time=datetime.datetime.now(datetime.timezone.utc),
         expires_at=expires_at,
         refresh_token=refresh_token,
         access_token=access_token,
@@ -35,9 +40,8 @@ async def create_session(
     redis_key = f"session:{user_id}:{session_id}"
 
     # 세션 정보를 JSON으로 변환하여 저장
-    import json
 
-    session_data = json.dumps(session.model_dump())
+    session_data = json.dumps(session.model_dump(mode="json"))
 
     # 세션 TTL을 리프레시 토큰과 동일하게 설정
     ttl = settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
@@ -64,7 +68,9 @@ async def get_user_sessions(user_id: str) -> List[SessionModel]:
             # datetime 문자열을 datetime 객체로 변환
             for field in ["login_time", "expires_at"]:
                 if field in session_dict:
-                    session_dict[field] = datetime.fromisoformat(session_dict[field])
+                    session_dict[field] = datetime.datetime.fromisoformat(
+                        session_dict[field]
+                    )
             sessions.append(SessionModel(**session_dict))
 
     return sessions
@@ -72,7 +78,6 @@ async def get_user_sessions(user_id: str) -> List[SessionModel]:
 
 async def terminate_session(user_id: str, session_id: str) -> bool:
     """특정 세션 종료"""
-    from jose import jwt
 
     redis = redis_client.get_client()
     session_key = f"session:{user_id}:{session_id}"
@@ -82,7 +87,6 @@ async def terminate_session(user_id: str, session_id: str) -> bool:
         return False
 
     # 세션 데이터 파싱
-    import json
 
     session_dict = json.loads(session_data)
     session = SessionModel(**session_dict)
@@ -98,7 +102,7 @@ async def terminate_session(user_id: str, session_id: str) -> bool:
                 options={"verify_exp": False},
             )
             exp = payload.get("exp", 0)
-            current_time = datetime.now().timestamp()
+            current_time = datetime.datetime.now(datetime.timezone.utc).timestamp()
             ttl = max(0, int(exp - current_time))
 
             if ttl > 0:

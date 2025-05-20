@@ -1,4 +1,4 @@
-from datetime import datetime
+import datetime
 from typing import Annotated, Any, Dict, List, Optional
 
 from bson import ObjectId
@@ -37,7 +37,9 @@ class AuthLogModel(BaseModel):
     user_id: Optional[str] = None
     username: Optional[str] = None
     event_type: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime.datetime = Field(
+        default_factory=lambda: datetime.datetime.now(datetime.timezone.utc)
+    )
     ip_address: str
     device_info: DeviceInfoModel = Field(default_factory=DeviceInfoModel)
     location: Optional[LocationModel] = None

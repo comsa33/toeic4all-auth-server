@@ -1,4 +1,4 @@
-from datetime import datetime
+import datetime
 from typing import Annotated, Any, Dict, List, Optional
 
 from bson import ObjectId
@@ -27,8 +27,8 @@ class UserProfileModel(BaseModel):
 
 class UserSubscriptionModel(BaseModel):
     plan: Optional[str] = "free"
-    start_date: Optional[datetime] = None
-    end_date: Optional[datetime] = None
+    start_date: Optional[datetime.datetime] = None
+    end_date: Optional[datetime.datetime] = None
     is_active: bool = True
     payment_id: Optional[str] = None
 
@@ -40,7 +40,7 @@ class UserStatsModel(BaseModel):
     part6_total: int = 0
     part7_correct: int = 0
     part7_total: int = 0
-    last_activity: Optional[datetime] = None
+    last_activity: Optional[datetime.datetime] = None
     streak_days: int = 0
 
 
@@ -52,9 +52,11 @@ class UserModel(BaseModel):
     profile: UserProfileModel = Field(default_factory=UserProfileModel)
     stats: UserStatsModel = Field(default_factory=UserStatsModel)
     subscription: UserSubscriptionModel = Field(default_factory=UserSubscriptionModel)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: Optional[datetime] = None
-    last_login: Optional[datetime] = None
+    created_at: datetime.datetime = Field(
+        default_factory=lambda: datetime.datetime.now(datetime.timezone.utc)
+    )
+    updated_at: Optional[datetime.datetime] = None
+    last_login: Optional[datetime.datetime] = None
     refresh_token: Optional[str] = None
     is_active: bool = True
     role: str = "user"
@@ -62,12 +64,14 @@ class UserModel(BaseModel):
 
     # 로그인 보안 관련 추가 필드
     login_attempts: int = 0
-    last_failed_login: Optional[datetime] = None
+    last_failed_login: Optional[datetime.datetime] = None
     account_locked: bool = False
-    account_locked_until: Optional[datetime] = None
+    account_locked_until: Optional[datetime.datetime] = None
 
     # 비밀번호 정책 관련 추가 필드
-    password_last_changed: datetime = Field(default_factory=datetime.utcnow)
+    password_last_changed: datetime.datetime = Field(
+        default_factory=lambda: datetime.datetime.now(datetime.timezone.utc)
+    )
     password_history: List[str] = Field(default_factory=list)
     password_change_required: bool = False
 

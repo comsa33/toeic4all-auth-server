@@ -1,7 +1,7 @@
+import datetime
 import secrets
 import smtplib
 import string
-from datetime import datetime, timedelta
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Any, Dict
@@ -85,7 +85,7 @@ async def create_verification_token(user_id: str, email: str, username: str) -> 
     users_collection = mongodb.get_users_db()
 
     # 토큰 저장 및 이메일 발송
-    now = datetime.now()
+    now = datetime.datetime.now(datetime.timezone.utc)
     result = await users_collection.update_one(
         {"_id": user_id},
         {
@@ -113,7 +113,9 @@ async def verify_email_token(token: str) -> bool:
 
     # 토큰 만료 확인 (24시간)
     sent_at = user.get("email_verification_sent_at")
-    if not sent_at or (datetime.now() - sent_at) > timedelta(hours=24):
+    if not sent_at or (
+        datetime.datetime.now(datetime.timezone.utc) - sent_at
+    ) > datetime.timedelta(hours=24):
         return False
 
     # 인증 처리
@@ -142,7 +144,9 @@ async def send_security_alert(
     """보안 알림 이메일 발송"""
     try:
         # 로그인 시간
-        login_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        login_time = datetime.datetime.now(datetime.timezone.utc).strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
 
         # 이메일 메시지 구성
         message = MIMEMultipart("alternative")

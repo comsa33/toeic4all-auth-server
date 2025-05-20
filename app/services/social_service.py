@@ -273,7 +273,7 @@ async def process_social_login(
                 "payment_id": "",  # None 대신 빈 문자열 사용
             },
             "is_email_verified": email_verified,
-            "email_verification_token": None,
+            "email_verification_token": "",
             "created_at": datetime.datetime.now(datetime.timezone.utc),
             "updated_at": datetime.datetime.now(
                 datetime.timezone.utc
