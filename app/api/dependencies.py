@@ -135,3 +135,13 @@ def get_admin_user(user=Depends(get_current_user)):
             status_code=status.HTTP_403_FORBIDDEN, detail="권한이 없습니다"
         )
     return user
+
+
+def get_verified_user(user=Depends(get_current_user)):
+    """이메일 인증이 완료된 사용자만 허용"""
+    if not user.get("is_email_verified", False):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="이메일 인증이 필요합니다. 이메일을 확인해주세요.",
+        )
+    return user
