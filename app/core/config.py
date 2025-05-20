@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
 
     # boolean 필드에 대한 유효성 검사 추가
-    @field_validator("SMTP_USE_TLS", "mode")
+    @field_validator("SMTP_USE_TLS")
     @classmethod
     def parse_bool(cls, v: Any) -> bool:
         if isinstance(v, bool):

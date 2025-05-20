@@ -85,5 +85,7 @@ spec:
           value: "{{ .Values.smtpSender }}"
         - name: SMTP_USE_TLS
           value: "{{ .Values.smtpUseTls }}"
+        - name: CLIENT_URL
+          value: "{{ .Values.clientUrl }}"
         - name: LOG_LEVEL
           value: {{ .Values.logLevel }}
