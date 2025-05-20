@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Annotated, Any, Dict, Optional
+from typing import Annotated, Any, Dict, List, Optional
 
 from bson import ObjectId
 from pydantic import BaseModel, BeforeValidator, EmailStr, Field
@@ -59,6 +59,17 @@ class UserModel(BaseModel):
     is_active: bool = True
     role: str = "user"
     social_connections: Dict = Field(default_factory=dict)
+
+    # 로그인 보안 관련 추가 필드
+    login_attempts: int = 0
+    last_failed_login: Optional[datetime] = None
+    account_locked: bool = False
+    account_locked_until: Optional[datetime] = None
+
+    # 비밀번호 정책 관련 추가 필드
+    password_last_changed: datetime = Field(default_factory=datetime.utcnow)
+    password_history: List[str] = Field(default_factory=list)
+    password_change_required: bool = False
 
     model_config = {
         "arbitrary_types_allowed": True,

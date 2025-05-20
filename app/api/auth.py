@@ -1,9 +1,12 @@
+import datetime
 from typing import Dict
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 
 from app.api.dependencies import get_current_user, get_user_ip_and_device_info
+from app.db.mongodb import mongodb
+from app.db.redis_client import redis_client
 from app.schemas.auth import (
     ChangePasswordRequest,
     DeleteAccountRequest,
@@ -13,16 +16,32 @@ from app.schemas.auth import (
     PasswordResetRequest,
     RefreshTokenRequest,
     Token,
+    UnlockAccountRequest,
 )
+from app.schemas.session import SessionListResponse, SessionResponse
 from app.schemas.user import UserCreate, UserResponse
 from app.services.auth_service import (
     authenticate_user,
+    change_password,
+    create_password_reset_token,
     create_user,
     delete_user_account,
+    log_auth_event,
     logout_user,
     refresh_access_token,
+    verify_reset_token_and_change_password,
 )
-from app.services.email_service import create_verification_token, verify_email_token
+from app.services.email_service import (
+    create_verification_token,
+    send_password_reset_email,
+    verify_email_token,
+)
+from app.services.session_service import (
+    get_user_sessions,
+    terminate_all_sessions_except_current,
+    terminate_session,
+)
+from app.utils.password_utils import validate_password_strength
 
 router = APIRouter()
 
@@ -156,10 +175,36 @@ async def logout(
 
 
 @router.post("/password-reset/request", status_code=status.HTTP_202_ACCEPTED)
-async def request_password_reset(request: Request, reset_data: PasswordResetRequest):
+async def request_password_reset(
+    request: Request,
+    reset_data: PasswordResetRequest,
+    ip_and_device: tuple = Depends(get_user_ip_and_device_info),
+):
     """비밀번호 재설정 요청"""
-    # 실제 구현에서는 이메일 전송 로직 추가
-    # 여기서는 요청을 받았다는 응답만 반환
+    ip_address, device_info = ip_and_device
+
+    # 토큰 생성 및 이메일 발송
+    result = await create_password_reset_token(reset_data.email)
+
+    # 항상 성공 응답 반환 (이메일 존재 여부 노출 방지)
+    if result:
+        token, username, email = result
+
+        # 이메일 발송
+        email_sent = await send_password_reset_email(email, username, token)
+
+        # 이벤트 로깅
+        await log_auth_event(
+            user_id=None,  # 사용자 ID는 로그에 남기지 않음 (보안상)
+            username=username,
+            event_type="password_reset_request",
+            ip_address=ip_address,
+            device_info=device_info,
+            status="success" if email_sent else "failure",
+            failure_reason=None if email_sent else "email_sending_failed",
+        )
+
+    # 성공 여부와 관계없이 동일한 응답 반환
     return {"message": "비밀번호 재설정 링크를 이메일로 전송했습니다."}
 
 
@@ -170,20 +215,66 @@ async def confirm_password_reset(
     ip_and_device: tuple = Depends(get_user_ip_and_device_info),
 ):
     """비밀번호 재설정 확인 및 변경"""
-    # 토큰 검증 및 비밀번호 변경 로직 추가
-    # 실제 구현에서는 토큰을 검증하고 비밀번호 변경 처리
+    ip_address, device_info = ip_and_device
+
+    # 비밀번호 확인 일치 검사
+    if reset_data.new_password != reset_data.confirm_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="새 비밀번호와 확인 비밀번호가 일치하지 않습니다.",
+        )
+
+    # 비밀번호 정책 검사
+    is_valid, error_msg = validate_password_strength(reset_data.new_password)
+    if not is_valid:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error_msg)
+
+    # 토큰 검증 및 비밀번호 변경
+    success = await verify_reset_token_and_change_password(
+        token=reset_data.token,
+        new_password=reset_data.new_password,
+        ip_address=ip_address,
+        device_info=device_info,
+    )
+
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="유효하지 않거나 만료된 비밀번호 재설정 링크입니다.",
+        )
+
     return {"message": "비밀번호가 성공적으로 변경되었습니다."}
 
 
 @router.post("/password-change", status_code=status.HTTP_200_OK)
-async def change_password(
+async def change_password_endpoint(
     request: Request,
     password_data: ChangePasswordRequest,
+    current_user: Dict = Depends(get_current_user),
     ip_and_device: tuple = Depends(get_user_ip_and_device_info),
 ):
     """비밀번호 변경"""
-    # 현재 비밀번호 검증 및 새 비밀번호로 변경하는 로직 추가
-    # 실제 구현에서는 인증된 사용자의 비밀번호를 변경
+    ip_address, device_info = ip_and_device
+
+    if password_data.new_password != password_data.confirm_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="새 비밀번호와 확인 비밀번호가 일치하지 않습니다.",
+        )
+
+    # 비밀번호 정책 검사
+    is_valid, error_msg = validate_password_strength(password_data.new_password)
+    if not is_valid:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error_msg)
+
+    await change_password(
+        user_id=str(current_user["_id"]),
+        current_password=password_data.current_password,
+        new_password=password_data.new_password,
+        ip_address=ip_address,
+        device_info=device_info,
+    )
+
     return {"message": "비밀번호가 성공적으로 변경되었습니다."}
 
 
@@ -247,3 +338,181 @@ async def delete_account(
     )
 
     return {"message": "계정이 성공적으로 삭제되었습니다."}
+
+
+@router.get("/sessions", response_model=SessionListResponse)
+async def list_active_sessions(
+    request: Request,
+    current_user: Dict = Depends(get_current_user),
+):
+    """사용자의 활성 세션 목록 조회"""
+    sessions = await get_user_sessions(str(current_user["_id"]))
+
+    # 세션 목록을 응답 모델에 맞게 변환
+    session_list = []
+    for session in sessions:
+        session_list.append(
+            SessionResponse(
+                session_id=session.session_id,
+                device_info=session.device_info,
+                ip_address=session.ip_address,
+                login_time=session.login_time,
+                is_current=request.headers.get("Authorization", "").endswith(
+                    session.access_token or ""
+                ),
+            )
+        )
+
+    return {"sessions": session_list}
+
+
+@router.delete("/sessions/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def revoke_session(
+    session_id: str,
+    request: Request,
+    current_user: Dict = Depends(get_current_user),
+    ip_and_device: tuple = Depends(get_user_ip_and_device_info),
+):
+    """특정 세션 종료 (원격 로그아웃)"""
+    ip_address, device_info = ip_and_device
+
+    # 세션 종료
+    success = await terminate_session(str(current_user["_id"]), session_id)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="세션을 찾을 수 없습니다."
+        )
+
+    # 이벤트 로깅
+    await log_auth_event(
+        user_id=str(current_user["_id"]),
+        username=current_user["username"],
+        event_type="session_terminated",
+        ip_address=ip_address,
+        device_info=device_info,
+        status="success",
+        details={"terminated_session_id": session_id},
+    )
+
+
+@router.delete("/sessions", status_code=status.HTTP_204_NO_CONTENT)
+async def revoke_all_other_sessions(
+    request: Request,
+    current_user: Dict = Depends(get_current_user),
+    ip_and_device: tuple = Depends(get_user_ip_and_device_info),
+):
+    """현재 세션을 제외한 모든 세션 종료"""
+    ip_address, device_info = ip_and_device
+
+    # 현재 세션 ID 확인
+    auth_header = request.headers.get("Authorization", "")
+    current_token = (
+        auth_header.replace("Bearer ", "") if auth_header.startswith("Bearer ") else ""
+    )
+
+    # Redis에서 현재 토큰에 해당하는 세션 ID 찾기
+    redis = redis_client.get_client()
+    session_ids = redis.smembers(f"user_sessions:{str(current_user['_id'])}")
+
+    current_session_id = None
+    for session_id in session_ids:
+        session_data = redis.get(f"session:{current_user['_id']}:{session_id}")
+        if session_data and current_token in session_data:
+            current_session_id = session_id
+            break
+
+    if not current_session_id:
+        # 현재 세션을 찾을 수 없는 경우, 새 세션 ID 생성
+        import uuid
+
+        current_session_id = str(uuid.uuid4())
+
+    # 다른 모든 세션 종료
+    terminated_count = await terminate_all_sessions_except_current(
+        str(current_user["_id"]), current_session_id
+    )
+
+    # 이벤트 로깅
+    await log_auth_event(
+        user_id=str(current_user["_id"]),
+        username=current_user["username"],
+        event_type="all_sessions_terminated",
+        ip_address=ip_address,
+        device_info=device_info,
+        status="success",
+        details={"terminated_count": terminated_count},
+    )
+
+
+@router.get("/password-status", status_code=status.HTTP_200_OK)
+async def check_password_status(
+    current_user: Dict = Depends(get_current_user),
+):
+    """비밀번호 상태 확인 (만료 여부 등)"""
+    # 비밀번호 변경 필요 여부
+    password_change_required = current_user.get("password_change_required", False)
+
+    # 비밀번호 변경 날짜 확인
+    password_last_changed = current_user.get("password_last_changed")
+    days_since_change = None
+
+    if password_last_changed:
+        days_since_change = (
+            datetime.datetime.now(datetime.timezone.utc) - password_last_changed
+        ).days
+
+    return {
+        "password_change_required": password_change_required,
+        "password_last_changed": password_last_changed,
+        "days_since_change": days_since_change,
+        "days_until_expiry": (
+            max(0, 90 - (days_since_change or 0))
+            if days_since_change is not None
+            else None
+        ),
+    }
+
+
+@router.post("/unlock-account", status_code=status.HTTP_200_OK)
+async def unlock_account(
+    request: Request,
+    unlock_data: UnlockAccountRequest,
+    ip_and_device: tuple = Depends(get_user_ip_and_device_info),
+):
+    """계정 잠금 해제 (관리자용)"""
+    ip_address, device_info = ip_and_device
+
+    # 관리자 권한 확인 로직 구현 필요
+
+    users_collection = mongodb.get_users_db()
+    user = await users_collection.find_one({"username": unlock_data.username})
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="사용자를 찾을 수 없습니다."
+        )
+
+    # 계정 잠금 해제
+    await users_collection.update_one(
+        {"_id": user["_id"]},
+        {
+            "$set": {
+                "account_locked": False,
+                "account_locked_until": None,
+                "login_attempts": 0,
+            }
+        },
+    )
+
+    # 이벤트 로깅
+    await log_auth_event(
+        user_id=str(user["_id"]),
+        username=user["username"],
+        event_type="account_unlock",
+        ip_address=ip_address,
+        device_info=device_info,
+        status="success",
+        details={"unlocked_by": unlock_data.admin_username},
+    )
+
+    return {"message": f"{unlock_data.username} 계정의 잠금이 해제되었습니다."}
