@@ -62,7 +62,6 @@ async def get_user_sessions(user_id: str) -> List[SessionModel]:
     for session_id in session_ids:
         session_data = redis.get(f"session:{user_id}:{session_id}")
         if session_data:
-            import json
 
             session_dict = json.loads(session_data)
             # datetime 문자열을 datetime 객체로 변환

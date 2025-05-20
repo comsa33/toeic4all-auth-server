@@ -1,10 +1,13 @@
 import datetime
+import uuid
 from typing import Dict
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
+from jose import JWTError, jwt
 
 from app.api.dependencies import get_current_user, get_user_ip_and_device_info
+from app.core.config import settings
 from app.db.mongodb import mongodb
 from app.db.redis_client import redis_client
 from app.schemas.auth import (
@@ -140,9 +143,6 @@ async def logout(
     ip_and_device: tuple = Depends(get_user_ip_and_device_info),
 ):
     """사용자 로그아웃 및 토큰 무효화"""
-    from jose import JWTError, jwt
-
-    from app.core.config import settings
 
     ip_address, device_info = ip_and_device
 
@@ -431,7 +431,6 @@ async def revoke_all_other_sessions(
 
     if not current_session_id:
         # 현재 세션을 찾을 수 없는 경우, 새 세션 ID 생성
-        import uuid
 
         current_session_id = str(uuid.uuid4())
 

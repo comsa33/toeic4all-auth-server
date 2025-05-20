@@ -4,6 +4,7 @@ from typing import Any, Dict, Optional, Tuple
 
 from bson.objectid import ObjectId
 from fastapi import HTTPException, status
+from jose import JWTError, jwt
 
 from app.core.config import settings
 from app.core.security import (
@@ -16,12 +17,12 @@ from app.db.mongodb import mongodb
 from app.db.redis_client import redis_client
 from app.models.user import UserModel
 from app.services.email_service import create_verification_token, send_security_alert
+from app.services.session_service import create_session
 from app.utils.logger import logger
 
 
 async def refresh_access_token(refresh_token: str) -> Tuple[str, str]:
     """리프레시 토큰을 사용하여 새 액세스 토큰 생성"""
-    from jose import JWTError, jwt
 
     try:
         # 리프레시 토큰 검증
@@ -98,7 +99,6 @@ async def logout_user(
     user_id: str, refresh_token: str, ip_address: str, device_info: Dict[str, Any]
 ) -> None:
     """사용자 로그아웃 처리"""
-    from jose import JWTError, jwt
 
     try:
         # 리프레시 토큰 검증
@@ -358,7 +358,6 @@ async def authenticate_user(
     username: str, password: str, ip_address: str, device_info: Dict[str, Any]
 ) -> Tuple[UserModel, str, str]:
     """사용자 인증 및 토큰 생성"""
-    from app.services.session_service import create_session
 
     users_collection = mongodb.get_users_db()
     user = await users_collection.find_one(
@@ -632,7 +631,6 @@ async def change_password(
     device_info: Dict[str, Any],
 ) -> bool:
     """비밀번호 변경 (이전 비밀번호 재사용 방지 추가)"""
-    from app.core.security import get_password_hash, verify_password
 
     users_collection = mongodb.get_users_db()
     user = await users_collection.find_one({"_id": ObjectId(user_id)})
@@ -751,7 +749,6 @@ async def verify_reset_token_and_change_password(
     token: str, new_password: str, ip_address: str, device_info: Dict[str, Any]
 ) -> bool:
     """비밀번호 재설정 토큰 검증 및 비밀번호 변경"""
-    from app.core.security import get_password_hash
 
     users_collection = mongodb.get_users_db()
 

@@ -8,7 +8,11 @@ import httpx
 from fastapi import HTTPException, status
 
 from app.core.config import settings
-from app.core.security import create_access_token, create_refresh_token
+from app.core.security import (
+    create_access_token,
+    create_refresh_token,
+    get_password_hash,
+)
 from app.db.mongodb import mongodb
 from app.models.user import UserModel
 from app.services.auth_service import log_auth_event
@@ -235,8 +239,6 @@ async def process_social_login(
 
         # 랜덤 비밀번호 생성 (소셜 로그인만 사용할 경우 필요 없지만, 필요시를 대비)
         random_password = generate_random_password()
-
-        from app.core.security import get_password_hash
 
         new_user = {
             "username": username,
