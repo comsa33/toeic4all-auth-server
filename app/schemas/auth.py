@@ -1,6 +1,6 @@
 from typing import Optional
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 
 
 class Token(BaseModel):
@@ -48,3 +48,15 @@ class LoginResponse(BaseModel):
     username: str
     email: str
     role: str
+
+
+class DeleteAccountRequest(BaseModel):
+    password: Optional[str] = None  # 일반 로그인 사용자 확인용
+    confirm_text: str  # "회원탈퇴" 문구 확인용
+
+    @field_validator("confirm_text")
+    @classmethod
+    def validate_confirm_text(cls, v: str) -> str:
+        if v != "회원탈퇴":
+            raise ValueError("'회원탈퇴'를 정확히 입력해주세요.")
+        return v

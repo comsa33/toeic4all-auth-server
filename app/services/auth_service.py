@@ -338,3 +338,91 @@ async def log_auth_event(
         await auth_logs_collection.insert_one(log_entry)
     except Exception as e:
         logger.error(f"인증 로그 저장 중 오류 발생: {e}")
+
+
+async def delete_user_account(
+    user_id: str,
+    password: Optional[str] = None,
+    ip_address: Optional[str] = None,
+    device_info: Optional[Dict[str, Any]] = None,
+) -> bool:
+    """사용자 계정 삭제 처리"""
+    users_collection = mongodb.get_users_db()
+    user = await users_collection.find_one({"_id": ObjectId(user_id)})
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="사용자를 찾을 수 없습니다."
+        )
+
+    # 일반 로그인 사용자인 경우 비밀번호 확인
+    has_social = bool(user.get("social_connections", {}))
+    if not has_social and password:
+        if not verify_password(password, user["password_hash"]):
+            # 인증 실패 로그 기록
+            await log_auth_event(
+                user_id=str(user["_id"]),
+                username=user["username"],
+                event_type="account_delete_failed",
+                ip_address=ip_address,
+                device_info=device_info,
+                status="failure",
+                failure_reason="invalid_password",
+            )
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="비밀번호가 일치하지 않습니다.",
+            )
+
+    # 계정 삭제 전 로그아웃 처리 (토큰 블랙리스트에 추가)
+    if user.get("refresh_token"):
+        try:
+            await logout_user(
+                user_id=user_id,
+                refresh_token=user["refresh_token"],
+                ip_address=ip_address,
+                device_info=device_info,
+            )
+        except Exception as e:
+            logger.warning(f"회원탈퇴 중 로그아웃 처리 오류: {e}")
+
+    # GDPR 등 개인정보보호를 위한 소프트 삭제 및 익명화 처리
+    anonymous_data = {
+        "username": f"deleted_{str(user['_id'])}",
+        "email": f"deleted_{str(user['_id'])}@deleted.user",
+        "password_hash": None,
+        "profile": {
+            "full_name": None,
+            "profile_image": None,
+            "bio": None,
+            "preferences": {},
+        },
+        "is_active": False,
+        "is_deleted": True,
+        "deleted_at": datetime.datetime.now(datetime.timezone.utc),
+        "refresh_token": None,
+        "social_connections": {},
+    }
+
+    # 계정 익명화 처리
+    await users_collection.update_one(
+        {"_id": ObjectId(user_id)}, {"$set": anonymous_data}
+    )
+
+    # 탈퇴 이벤트 로깅
+    await log_auth_event(
+        user_id=user_id,
+        username=user["username"],
+        event_type="account_deleted",
+        ip_address=ip_address,
+        device_info=device_info,
+        status="success",
+    )
+
+    # Redis에 저장된 토큰 정보 삭제
+    redis = redis_client.get_client()
+    key_pattern = f"*:{user_id}:*"
+    for key in redis.keys(key_pattern):
+        redis.delete(key)
+
+    return True

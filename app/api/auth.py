@@ -1,9 +1,12 @@
+from typing import Dict
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 
-from app.api.dependencies import get_user_ip_and_device_info
+from app.api.dependencies import get_current_user, get_user_ip_and_device_info
 from app.schemas.auth import (
     ChangePasswordRequest,
+    DeleteAccountRequest,
     LoginRequest,
     LoginResponse,
     PasswordResetConfirm,
@@ -15,6 +18,7 @@ from app.schemas.user import UserCreate, UserResponse
 from app.services.auth_service import (
     authenticate_user,
     create_user,
+    delete_user_account,
     logout_user,
     refresh_access_token,
 )
@@ -180,3 +184,27 @@ async def change_password(
     # 현재 비밀번호 검증 및 새 비밀번호로 변경하는 로직 추가
     # 실제 구현에서는 인증된 사용자의 비밀번호를 변경
     return {"message": "비밀번호가 성공적으로 변경되었습니다."}
+
+
+@router.post("/delete-account", status_code=status.HTTP_200_OK)
+async def delete_account(
+    request: Request,
+    delete_data: DeleteAccountRequest,
+    current_user: Dict = Depends(get_current_user),
+    ip_and_device: tuple = Depends(get_user_ip_and_device_info),
+):
+    """사용자 계정 삭제"""
+    ip_address, device_info = ip_and_device
+
+    # 소셜 로그인 사용자인 경우 비밀번호 확인 생략
+    has_social_connections = bool(current_user.get("social_connections", {}))
+    password = None if has_social_connections else delete_data.password
+
+    await delete_user_account(
+        user_id=str(current_user["_id"]),
+        password=password,
+        ip_address=ip_address,
+        device_info=device_info,
+    )
+
+    return {"message": "계정이 성공적으로 삭제되었습니다."}
