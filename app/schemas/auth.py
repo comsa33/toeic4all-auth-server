@@ -60,3 +60,9 @@ class DeleteAccountRequest(BaseModel):
         if v != "회원탈퇴":
             raise ValueError("'회원탈퇴'를 정확히 입력해주세요.")
         return v
+
+
+class UnlockAccountRequest(BaseModel):
+    username: str
+    admin_username: str
+    reason: Optional[str] = None

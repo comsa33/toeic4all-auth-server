@@ -11,6 +11,7 @@ from app.core.config import settings
 from app.core.security import create_access_token, create_refresh_token
 from app.db.mongodb import mongodb
 from app.models.user import UserModel
+from app.services.auth_service import log_auth_event
 from app.utils.logger import logger
 
 
@@ -195,7 +196,6 @@ async def process_social_login(
     email_verified: bool = True,
 ) -> Tuple[UserModel, str, str]:
     """소셜 로그인 공통 처리 로직"""
-    from app.services.auth_service import log_auth_event
 
     users_collection = mongodb.get_users_db()
 

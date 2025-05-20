@@ -1,8 +1,9 @@
-import re
 from datetime import datetime
 from typing import Dict, Optional
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
+
+from app.utils.password_utils import validate_password_strength, validate_username
 
 
 class UserProfileBase(BaseModel):
@@ -27,28 +28,17 @@ class UserCreate(BaseModel):
     @field_validator("username")
     @classmethod
     def username_alphanumeric(cls, v: str) -> str:
-        assert re.match(
-            r"^[a-zA-Z0-9_-]+$", v
-        ), "사용자 이름은 알파벳, 숫자, 밑줄, 하이픈만 포함할 수 있습니다."
-        assert len(v) >= 3, "사용자 이름은 최소 3자 이상이어야 합니다."
+        is_valid, error_msg = validate_username(v)
+        if not is_valid:
+            raise ValueError(error_msg)
         return v
 
     @field_validator("password")
     @classmethod
     def password_strength(cls, v: str) -> str:
-        assert len(v) >= 8, "비밀번호는 최소 8자 이상이어야 합니다."
-        assert re.search(
-            r"[A-Z]", v
-        ), "비밀번호는 최소 1개 이상의 대문자를 포함해야 합니다."
-        assert re.search(
-            r"[a-z]", v
-        ), "비밀번호는 최소 1개 이상의 소문자를 포함해야 합니다."
-        assert re.search(
-            r"[0-9]", v
-        ), "비밀번호는 최소 1개 이상의 숫자를 포함해야 합니다."
-        assert re.search(
-            r"[^A-Za-z0-9]", v
-        ), "비밀번호는 최소 1개 이상의 특수문자를 포함해야 합니다."
+        is_valid, error_msg = validate_password_strength(v)
+        if not is_valid:
+            raise ValueError(error_msg)
         return v
 
     @field_validator("confirm_password")
