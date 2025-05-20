@@ -38,6 +38,17 @@ class Settings(BaseSettings):
     NAVER_CLIENT_ID: Optional[str] = None
     NAVER_CLIENT_SECRET: Optional[str] = None
 
+    # 이메일 설정
+    SMTP_SERVER: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: Optional[str] = None
+    SMTP_PASSWORD: Optional[str] = None
+    SMTP_SENDER: str = "noreply@toeic4all.com"
+    SMTP_USE_TLS: bool = True
+
+    # 클라이언트 URL (이메일 인증 링크용)
+    CLIENT_URL: str = "https://toeic4all.po24lio.com"
+
     # 로깅 설정
     LOG_LEVEL: str = "INFO"
 

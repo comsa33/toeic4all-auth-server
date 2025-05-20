@@ -192,6 +192,7 @@ async def process_social_login(
     profile_image: str,
     ip_address: str,
     device_info: Dict[str, Any],
+    email_verified: bool = True,
 ) -> Tuple[UserModel, str, str]:
     """소셜 로그인 공통 처리 로직"""
     from app.services.auth_service import log_auth_event
@@ -271,6 +272,8 @@ async def process_social_login(
                 "is_active": True,
                 "payment_id": "",  # None 대신 빈 문자열 사용
             },
+            "is_email_verified": email_verified,
+            "email_verification_token": None,
             "created_at": datetime.datetime.now(datetime.timezone.utc),
             "updated_at": datetime.datetime.now(
                 datetime.timezone.utc

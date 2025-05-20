@@ -1,6 +1,6 @@
 from typing import Dict
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 
 from app.api.dependencies import get_current_user, get_user_ip_and_device_info
@@ -22,6 +22,7 @@ from app.services.auth_service import (
     logout_user,
     refresh_access_token,
 )
+from app.services.email_service import create_verification_token, verify_email_token
 
 router = APIRouter()
 
@@ -184,6 +185,44 @@ async def change_password(
     # 현재 비밀번호 검증 및 새 비밀번호로 변경하는 로직 추가
     # 실제 구현에서는 인증된 사용자의 비밀번호를 변경
     return {"message": "비밀번호가 성공적으로 변경되었습니다."}
+
+
+@router.get("/verify-email", status_code=status.HTTP_200_OK)
+async def verify_email(
+    token: str = Query(..., description="이메일 인증 토큰"),
+):
+    """이메일 인증 처리"""
+
+    success = await verify_email_token(token)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="유효하지 않거나 만료된 인증 토큰입니다.",
+        )
+
+    return {"message": "이메일 인증이 완료되었습니다."}
+
+
+@router.post("/resend-verification", status_code=status.HTTP_200_OK)
+async def resend_verification(
+    current_user: Dict = Depends(get_current_user),
+):
+    """이메일 인증 메일 재발송"""
+    # 이미 인증된 경우
+    if current_user.get("is_email_verified", False):
+        return {"message": "이미 인증된 이메일입니다."}
+
+    success = await create_verification_token(
+        str(current_user["_id"]), current_user["email"], current_user["username"]
+    )
+
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="이메일 발송 중 오류가 발생했습니다.",
+        )
+
+    return {"message": "인증 이메일이 성공적으로 재발송되었습니다."}
 
 
 @router.post("/delete-account", status_code=status.HTTP_200_OK)

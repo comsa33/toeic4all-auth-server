@@ -14,6 +14,7 @@ from app.core.security import (
 from app.db.mongodb import mongodb
 from app.db.redis_client import redis_client
 from app.models.user import UserModel
+from app.services.email_service import create_verification_token
 from app.utils.logger import logger
 
 
@@ -290,6 +291,11 @@ async def create_user(
     # 데이터베이스에 사용자 저장
     result = await users_collection.insert_one(new_user)
     new_user["_id"] = result.inserted_id
+
+    # 이메일 인증 토큰 생성 및 이메일 발송 (비동기로 처리)
+    await create_verification_token(
+        str(result.inserted_id), new_user["email"], new_user["username"]
+    )
 
     # 회원가입 이벤트 기록
     await log_auth_event(

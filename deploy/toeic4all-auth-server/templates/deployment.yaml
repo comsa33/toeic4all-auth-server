@@ -73,5 +73,17 @@ spec:
           value: "{{ .Values.naverClientId }}"
         - name: NAVER_CLIENT_SECRET
           value: "{{ .Values.naverClientSecret }}"
+        - name: SMTP_SERVER
+          value: "{{ .Values.smtpServer }}"
+        - name: SMTP_PORT
+          value: "{{ .Values.smtpPort }}"
+        - name: SMTP_USERNAME
+          value: "{{ .Values.smtpUsername }}"
+        - name: SMTP_PASSWORD
+          value: "{{ .Values.smtpPassword }}"
+        - name: SMTP_SENDER
+          value: "{{ .Values.smtpSender }}"
+        - name: SMTP_USE_TLS
+          value: "{{ .Values.smtpUseTls }}"
         - name: LOG_LEVEL
           value: {{ .Values.logLevel }}
