@@ -1,7 +1,7 @@
 import json
-from typing import List, Optional
+from typing import Any, List, Optional
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -51,6 +51,24 @@ class Settings(BaseSettings):
 
     # 로깅 설정
     LOG_LEVEL: str = "INFO"
+
+    # boolean 필드에 대한 유효성 검사 추가
+    @field_validator("SMTP_USE_TLS", "mode")
+    @classmethod
+    def parse_bool(cls, v: Any) -> bool:
+        if isinstance(v, bool):
+            return v
+        if isinstance(v, str):
+            # 빈 문자열이나 null 문자열은 기본값 True 사용
+            if v.lower() in ("", "null", "none"):
+                return True
+            # 명시적으로 true/false 문자열 처리
+            if v.lower() in ("true", "t", "yes", "y", "1"):
+                return True
+            if v.lower() in ("false", "f", "no", "n", "0"):
+                return False
+        # 다른 모든 경우 기본값 True 사용
+        return True
 
     # Define BACKEND_CORS_ORIGINS as a property that parses the raw string
     @property
