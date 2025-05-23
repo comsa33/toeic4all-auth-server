@@ -34,9 +34,7 @@ app = FastAPI(
     description="TOEIC4ALL 인증 API",
     version="0.1.0",
     openapi_url=(
-        "/api/v1/auth/openapi.json"
-        if settings.ENVIRONMENT == "production"
-        else "/openapi.json"
+        "/openapi.json" if settings.ENVIRONMENT == "production" else "/openapi.json"
     ),
     docs_url="/docs",
     redoc_url="/redoc",
