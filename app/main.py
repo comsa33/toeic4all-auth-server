@@ -26,13 +26,21 @@ async def lifespan(app: FastAPI):
     logger.info("Application shutdown complete")
 
 
+# 프로덕션 환경에서 root_path 설정
+root_path = "/api/v1/auth" if settings.ENVIRONMENT == "production" else ""
+
 app = FastAPI(
     title=settings.APP_NAME,
     description="TOEIC4ALL 인증 API",
-    version="0.0.1",
-    openapi_url="/openapi.json",
+    version="0.1.0",
+    openapi_url=(
+        "/api/v1/auth/openapi.json"
+        if settings.ENVIRONMENT == "production"
+        else "/openapi.json"
+    ),
     docs_url="/docs",
     redoc_url="/redoc",
+    root_path=root_path,  # 프록시 환경에서 올바른 URL 생성
     lifespan=lifespan,  # 라이프스팬 이벤트 핸들러 등록
 )
 
@@ -80,6 +88,21 @@ async def log_requests(request: Request, call_next):
 @app.get("/health", tags=["시스템"])
 async def health_check():
     return {"status": "online", "api": "toeic4all-auth-server", "version": "0.1.0"}
+
+
+# 메인 엔드포인트
+@app.get("/", tags=["시스템"])
+async def root():
+    return {
+        "status": "online",
+        "message": "TOEIC4ALL Auth API is running",
+        "docs": (
+            "/api/v1/auth/docs" if settings.ENVIRONMENT == "production" else "/docs"
+        ),
+        "redoc": (
+            "/api/v1/auth/redoc" if settings.ENVIRONMENT == "production" else "/redoc"
+        ),
+    }
 
 
 if __name__ == "__main__":

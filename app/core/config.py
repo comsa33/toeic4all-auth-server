@@ -6,6 +6,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    ENVIRONMENT: str = "development"  # 환경 설정 (development, production)
+
     # 애플리케이션 설정
     APP_NAME: str = "TOEIC4ALL Auth API"
     API_PREFIX: str = "/api/v1"
