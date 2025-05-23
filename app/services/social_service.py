@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import secrets
 import string
@@ -16,6 +17,7 @@ from app.core.security import (
 from app.db.mongodb import mongodb
 from app.models.user import UserModel
 from app.services.auth_service import log_auth_event
+from app.services.email_service import create_verification_token
 from app.utils.logger import logger
 
 
@@ -119,7 +121,7 @@ async def handle_kakao_login(
         provider="kakao",
         provider_user_id=str(user_info["id"]),
         email=user_info.get("kakao_account", {}).get(
-            "email", f"{user_info['id']}@kakao.user"
+            "email", f"{user_info['id']}@kakao.com"
         ),
         username=f"kakao_{user_info['id']}",
         name=user_info.get("kakao_account", {}).get("profile", {}).get("nickname", ""),
@@ -197,7 +199,6 @@ async def process_social_login(
     profile_image: str,
     ip_address: str,
     device_info: Dict[str, Any],
-    email_verified: bool = True,
 ) -> Tuple[UserModel, str, str]:
     """소셜 로그인 공통 처리 로직"""
 
@@ -274,8 +275,6 @@ async def process_social_login(
                 "is_active": True,
                 "payment_id": "",  # None 대신 빈 문자열 사용
             },
-            "is_email_verified": email_verified,
-            "email_verification_token": "",
             "created_at": datetime.datetime.now(datetime.timezone.utc),
             "updated_at": datetime.datetime.now(
                 datetime.timezone.utc
@@ -294,6 +293,49 @@ async def process_social_login(
 
         result = await users_collection.insert_one(new_user)
         user = await users_collection.find_one({"_id": result.inserted_id})
+
+        if provider not in ["kakao"]:
+            # 이메일 발송 재시도
+            for attempt in range(3):
+                await log_auth_event(
+                    user_id=str(result.inserted_id),
+                    username=new_user["username"],
+                    event_type="email_verification_sent",
+                    ip_address=ip_address,
+                    device_info=device_info,
+                    status="success",
+                )
+                if await create_verification_token(
+                    str(result.inserted_id), new_user["email"], new_user["username"]
+                ):
+                    await log_auth_event(
+                        user_id=str(result.inserted_id),
+                        username=new_user["username"],
+                        event_type="email_verified",
+                        ip_address=ip_address,
+                        device_info=device_info,
+                        status="success",
+                    )
+                    break
+                else:
+                    logger.warning(
+                        f"이메일 인증 토큰 생성 실패 (시도 {attempt + 1}/3): {new_user['email']}"
+                    )
+                    if attempt == 2:
+                        await log_auth_event(
+                            user_id=str(result.inserted_id),
+                            username=new_user["username"],
+                            event_type="email_verification_sent_failed",
+                            ip_address=ip_address,
+                            device_info=device_info,
+                            status="failure",
+                            failure_reason="email_verification_failed",
+                        )
+                        raise HTTPException(
+                            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail="이메일 인증 토큰 생성에 실패했습니다.",
+                        )
+                    await asyncio.sleep(2**attempt)
 
         # 회원가입 이벤트 기록
         await log_auth_event(
