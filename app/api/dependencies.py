@@ -11,9 +11,7 @@ from app.db.mongodb import mongodb
 from app.db.redis_client import redis_client
 from app.schemas.auth import TokenPayload
 
-oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl=f"{settings.API_PREFIX}/auth/login/oauth2"
-)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login/oauth2")
 
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):

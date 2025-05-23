@@ -30,9 +30,9 @@ app = FastAPI(
     title=settings.APP_NAME,
     description="TOEIC4ALL 인증 API",
     version="0.0.1",
-    openapi_url=f"{settings.API_PREFIX}/openapi.json",
-    docs_url=f"{settings.API_PREFIX}/docs",
-    redoc_url=f"{settings.API_PREFIX}/redoc",
+    openapi_url="/openapi.json",
+    docs_url="/docs",
+    redoc_url="/redoc",
     lifespan=lifespan,  # 라이프스팬 이벤트 핸들러 등록
 )
 
@@ -46,10 +46,8 @@ app.add_middleware(
 )
 
 # 라우터 등록
-app.include_router(auth.router, prefix=f"{settings.API_PREFIX}", tags=["인증"])
-app.include_router(
-    social.router, prefix=f"{settings.API_PREFIX}/social", tags=["소셜 로그인"]
-)
+app.include_router(auth.router, prefix="", tags=["인증"])
+app.include_router(social.router, prefix="/social", tags=["소셜 로그인"])
 
 
 # 요청 처리 미들웨어 (로깅, 타이밍)
@@ -79,7 +77,7 @@ async def log_requests(request: Request, call_next):
 
 
 # 상태 확인 엔드포인트
-@app.get(f"{settings.API_PREFIX}/health", tags=["시스템"])
+@app.get("/health", tags=["시스템"])
 async def health_check():
     return {"status": "online", "api": "toeic4all-auth-server", "version": "0.1.0"}
 
