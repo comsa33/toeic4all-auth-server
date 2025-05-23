@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import secrets
 from typing import Any, Dict, Optional, Tuple
@@ -212,10 +213,17 @@ async def create_user(
     result = await users_collection.insert_one(new_user)
     new_user["_id"] = result.inserted_id
 
-    # 이메일 인증 토큰 생성 및 이메일 발송 (비동기로 처리)
-    await create_verification_token(
-        str(result.inserted_id), new_user["email"], new_user["username"]
-    )
+    # 이메일 발송 재시도
+    for attempt in range(3):
+        if await create_verification_token(
+            str(result.inserted_id), new_user["email"], new_user["username"]
+        ):
+            break
+            await asyncio.sleep(2**attempt)
+        else:
+            logger.warning(
+                f"이메일 인증 토큰 생성 실패 (시도 {attempt + 1}/3): {new_user['email']}"
+            )
 
     # 회원가입 이벤트 기록
     await log_auth_event(
@@ -316,11 +324,11 @@ async def delete_user_account(
     anonymous_data = {
         "username": f"deleted_{str(user['_id'])}",
         "email": f"deleted_{str(user['_id'])}@deleted.user",
-        "password_hash": None,
+        "password_hash": "DELETED",
         "profile": {
-            "full_name": None,
-            "profile_image": None,
-            "bio": None,
+            "full_name": "[DELETED]",
+            "profile_image": "[DELETED]",
+            "bio": "[DELETED]",
             "preferences": {},
         },
         "is_active": False,
