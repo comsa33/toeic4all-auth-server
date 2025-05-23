@@ -215,15 +215,45 @@ async def create_user(
 
     # 이메일 발송 재시도
     for attempt in range(3):
+        await log_auth_event(
+            user_id=str(result.inserted_id),
+            username=new_user["username"],
+            event_type="email_verification_sent",
+            ip_address=ip_address,
+            device_info=device_info,
+            status="success",
+        )
         if await create_verification_token(
             str(result.inserted_id), new_user["email"], new_user["username"]
         ):
+            await log_auth_event(
+                user_id=str(result.inserted_id),
+                username=new_user["username"],
+                event_type="email_verified",
+                ip_address=ip_address,
+                device_info=device_info,
+                status="success",
+            )
             break
-            await asyncio.sleep(2**attempt)
         else:
             logger.warning(
                 f"이메일 인증 토큰 생성 실패 (시도 {attempt + 1}/3): {new_user['email']}"
             )
+            if attempt == 2:
+                await log_auth_event(
+                    user_id=str(result.inserted_id),
+                    username=new_user["username"],
+                    event_type="email_verification_sent_failed",
+                    ip_address=ip_address,
+                    device_info=device_info,
+                    status="failure",
+                    failure_reason="email_verification_failed",
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="이메일 인증 토큰 생성에 실패했습니다.",
+                )
+            await asyncio.sleep(2**attempt)
 
     # 회원가입 이벤트 기록
     await log_auth_event(

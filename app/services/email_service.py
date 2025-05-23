@@ -6,6 +6,8 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Any, Dict
 
+from bson.objectid import ObjectId
+
 from app.core.config import settings
 from app.db.mongodb import mongodb
 from app.utils.logger import logger
@@ -87,7 +89,7 @@ async def create_verification_token(user_id: str, email: str, username: str) -> 
     # 토큰 저장 및 이메일 발송
     now = datetime.datetime.now(datetime.timezone.utc)
     result = await users_collection.update_one(
-        {"_id": user_id},
+        {"_id": ObjectId(user_id)},
         {
             "$set": {
                 "email_verification_token": token,
@@ -95,6 +97,8 @@ async def create_verification_token(user_id: str, email: str, username: str) -> 
             }
         },
     )
+    logger.info(f"{result} documents updated")
+    logger.info(f"{result.modified_count} documents modified")
 
     if result.modified_count == 1:
         # 이메일 발송
