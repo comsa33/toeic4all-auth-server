@@ -16,7 +16,7 @@ service:
   port: 80
 
 appName: "TOEIC4ALL Auth API"
-apiPrefix: "/api/v1"
+apiPrefix: "/api/v1/auth"
 environment: "production"
 backendCorsOrigins: ""
 mongodbUri: ""

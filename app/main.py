@@ -46,9 +46,9 @@ app.add_middleware(
 )
 
 # 라우터 등록
-app.include_router(auth.router, prefix=f"{settings.API_PREFIX}/auth", tags=["인증"])
+app.include_router(auth.router, prefix=f"{settings.API_PREFIX}", tags=["인증"])
 app.include_router(
-    social.router, prefix=f"{settings.API_PREFIX}/auth/social", tags=["소셜 로그인"]
+    social.router, prefix=f"{settings.API_PREFIX}/social", tags=["소셜 로그인"]
 )
 
 
