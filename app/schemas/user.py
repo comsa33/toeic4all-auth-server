@@ -75,3 +75,22 @@ class UserResponse(BaseModel):
     created_at: datetime
     updated_at: Optional[datetime] = None
     is_active: bool
+
+
+class UserMeResponse(BaseModel):
+    """현재 사용자 정보 응답 스키마 (/me 엔드포인트용)"""
+
+    id: str
+    username: str
+    email: EmailStr
+    profile: UserProfileBase
+    role: str
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    last_login: Optional[datetime] = None
+    is_active: bool
+    # 추가 필드들 (모바일 앱에서 필요한 경우)
+    subscription: Optional[Dict] = None
+    stats: Optional[Dict] = None
+    is_email_verified: Optional[bool] = None
+    password_change_required: Optional[bool] = None

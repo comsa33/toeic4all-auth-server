@@ -22,7 +22,7 @@ from app.schemas.auth import (
     UnlockAccountRequest,
 )
 from app.schemas.session import SessionListResponse, SessionResponse
-from app.schemas.user import UserCreate, UserResponse
+from app.schemas.user import UserCreate, UserMeResponse, UserProfileBase, UserResponse
 from app.services.auth_service import (
     authenticate_user,
     change_password,
@@ -47,6 +47,42 @@ from app.services.session_service import (
 from app.utils.password_utils import validate_password_strength
 
 router = APIRouter()
+
+
+@router.get("/me", response_model=UserMeResponse)
+async def get_current_user_info(
+    request: Request,
+    current_user: Dict = Depends(get_current_user),
+):
+    """현재 로그인된 사용자 정보 조회 (자동 로그인용)"""
+
+    # 사용자 정보를 응답 모델에 맞게 변환
+    user_info = {
+        "id": str(current_user["_id"]),
+        "username": current_user["username"],
+        "email": current_user["email"],
+        "profile": current_user.get("profile", {}),
+        "role": current_user.get("role", "user"),
+        "created_at": current_user["created_at"],
+        "updated_at": current_user.get("updated_at"),
+        "last_login": current_user.get("last_login"),
+        "is_active": current_user.get("is_active", True),
+        # 추가 정보 (모바일 앱에서 필요한 경우)
+        "subscription": current_user.get("subscription"),
+        "stats": current_user.get("stats"),
+        "is_email_verified": current_user.get("is_email_verified", False),
+        "password_change_required": current_user.get("password_change_required", False),
+    }
+
+    return user_info
+
+
+@router.get("/me/profile", response_model=UserProfileBase)
+async def get_current_user_profile(
+    current_user: Dict = Depends(get_current_user),
+):
+    """현재 사용자의 프로필 정보만 조회"""
+    return current_user.get("profile", {})
 
 
 @router.post("/login", response_model=LoginResponse)
