@@ -49,15 +49,62 @@ async def google_mobile_login(
     auth_data: GoogleMobileLoginRequest,
     ip_and_device: tuple = Depends(get_user_ip_and_device_info),
 ):
-    """모바일 앱용 구글 로그인 (ID 토큰 방식)"""
+    """모바일 앱용 구글 로그인 (ID 토큰 방식) - 플랫폼별 클라이언트 ID 지원"""
     try:
-        # ID 토큰 검증
-        idinfo = id_token.verify_oauth2_token(
-            auth_data.id_token, requests.Request(), settings.GOOGLE_CLIENT_ID
-        )
+        # ID Token 형식 검증
+        if not auth_data.id_token or len(auth_data.id_token.split(".")) != 3:
+            logger.error(f"잘못된 ID Token 형식: {auth_data.id_token[:100]}...")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="올바른 Google ID Token 형식이 아닙니다. JWT 토큰이어야 합니다.",
+            )
+
+        logger.info(f"ID Token 검증 시작: {auth_data.id_token[:50]}...")
+
+        # 🔄 여러 클라이언트 ID로 순차 검증
+        client_ids = settings.GOOGLE_CLIENT_IDS
+        if not client_ids:
+            logger.error("Google 클라이언트 ID가 설정되지 않았습니다.")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Google 로그인 설정 오류입니다.",
+            )
+
+        logger.info(f"검증할 클라이언트 ID 목록: {len(client_ids)}개")
+
+        idinfo = None
+        verified_client_id = None
+
+        # 각 클라이언트 ID로 순차 검증 시도
+        for client_id in client_ids:
+            try:
+                logger.info(f"클라이언트 ID 검증 시도: {client_id[-10:]}...")
+
+                idinfo = id_token.verify_oauth2_token(
+                    auth_data.id_token, requests.Request(), client_id
+                )
+
+                verified_client_id = client_id
+                logger.info(
+                    f"ID Token 검증 성공: {client_id[-10:]}... for {idinfo.get('email')}"
+                )
+                break
+
+            except ValueError as ve:
+                logger.warning(f"클라이언트 ID {client_id[-10:]}... 검증 실패: {ve}")
+                continue
+
+        # 모든 클라이언트 ID 검증 실패
+        if idinfo is None:
+            logger.error("모든 클라이언트 ID에서 검증 실패")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="유효하지 않은 Google ID 토큰입니다.",
+            )
 
         # 발급자 확인
         if idinfo["iss"] not in ["accounts.google.com", "https://accounts.google.com"]:
+            logger.error(f"잘못된 발급자: {idinfo['iss']}")
             raise ValueError("Invalid issuer.")
 
         # 사용자 정보 추출
@@ -65,6 +112,10 @@ async def google_mobile_login(
         email = idinfo["email"]
         name = idinfo.get("name", "")
         picture = idinfo.get("picture", "")
+
+        logger.info(
+            f"사용자 정보 추출 완료: {email} (클라이언트: {verified_client_id[-10:]}...)"
+        )
 
         ip_address, device_info = ip_and_device
 
@@ -79,6 +130,8 @@ async def google_mobile_login(
             ip_address=ip_address,
             device_info=device_info,
         )
+
+        logger.info(f"로그인 처리 완료: {user.username}")
 
         return {
             "access_token": access_token,

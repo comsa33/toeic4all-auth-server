@@ -35,6 +35,9 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: Optional[str] = None
     GOOGLE_CLIENT_SECRET: Optional[str] = None
 
+    GOOGLE_CLIENT_ID_IOS: Optional[str] = None
+    GOOGLE_CLIENT_ID_ANDROID: Optional[str] = None
+
     KAKAO_CLIENT_ID: Optional[str] = None
 
     NAVER_CLIENT_ID: Optional[str] = None
@@ -53,6 +56,23 @@ class Settings(BaseSettings):
 
     # 로깅 설정
     LOG_LEVEL: str = "INFO"
+
+    @property
+    def GOOGLE_CLIENT_IDS(self) -> List[str]:
+        """모든 Google 클라이언트 ID 목록 반환"""
+        client_ids = []
+
+        # 플랫폼별 클라이언트 ID 추가
+        if self.GOOGLE_CLIENT_ID_IOS:
+            client_ids.append(self.GOOGLE_CLIENT_ID_IOS)
+        if self.GOOGLE_CLIENT_ID_ANDROID:
+            client_ids.append(self.GOOGLE_CLIENT_ID_ANDROID)
+
+        # 기존 클라이언트 ID도 포함 (하위 호환성)
+        if self.GOOGLE_CLIENT_ID and self.GOOGLE_CLIENT_ID not in client_ids:
+            client_ids.append(self.GOOGLE_CLIENT_ID)
+
+        return client_ids
 
     # boolean 필드에 대한 유효성 검사 추가
     @field_validator("SMTP_USE_TLS")

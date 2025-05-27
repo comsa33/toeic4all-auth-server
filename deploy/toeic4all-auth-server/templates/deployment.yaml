@@ -67,6 +67,10 @@ spec:
           value: "{{ .Values.googleClientId }}"
         - name: GOOGLE_CLIENT_SECRET
           value: "{{ .Values.googleClientSecret }}"
+        - name: GOOGLE_CLIENT_ID_IOS
+          value: "{{ .Values.googleClientIdIos }}"
+        - name: GOOGLE_CLIENT_ID_ANDROID
+          value: "{{ .Values.googleClientIdAndroid }}"
         - name: KAKAO_CLIENT_ID
           value: "{{ .Values.kakaoClientId }}"
         - name: NAVER_CLIENT_ID
