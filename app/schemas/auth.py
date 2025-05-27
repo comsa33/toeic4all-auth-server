@@ -66,3 +66,8 @@ class UnlockAccountRequest(BaseModel):
     username: str
     admin_username: str
     reason: Optional[str] = None
+
+
+class GoogleMobileLoginRequest(BaseModel):
+    id_token: str
+    access_token: Optional[str] = None
