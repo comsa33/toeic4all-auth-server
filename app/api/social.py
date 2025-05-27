@@ -1,10 +1,16 @@
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from google.auth.transport import requests
 from google.oauth2 import id_token
 
 from app.api.dependencies import get_user_ip_and_device_info
 from app.core.config import settings
-from app.schemas.auth import GoogleMobileLoginRequest, LoginResponse
+from app.schemas.auth import (
+    GoogleMobileLoginRequest,
+    KakaoMobileLoginRequest,
+    LoginResponse,
+    NaverMobileLoginRequest,
+)
 from app.services.social_service import (
     handle_google_login,
     handle_kakao_login,
@@ -184,6 +190,78 @@ async def kakao_login(
     }
 
 
+@router.post("/kakao/mobile", response_model=LoginResponse)
+async def kakao_mobile_login(
+    request: Request,
+    auth_data: KakaoMobileLoginRequest,
+    ip_and_device: tuple = Depends(get_user_ip_and_device_info),
+):
+    """모바일 앱용 카카오 로그인 (Access Token 방식)"""
+    try:
+        logger.info(f"카카오 모바일 로그인 시작: {auth_data.access_token[:20]}...")
+
+        # 카카오 사용자 정보 조회
+        async with httpx.AsyncClient() as client:
+            userinfo_url = "https://kapi.kakao.com/v2/user/me"
+            headers = {"Authorization": f"Bearer {auth_data.access_token}"}
+
+            userinfo_response = await client.get(userinfo_url, headers=headers)
+
+            if userinfo_response.status_code != 200:
+                logger.error(f"카카오 사용자 정보 조회 실패: {userinfo_response.text}")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="유효하지 않은 카카오 액세스 토큰입니다.",
+                )
+
+            user_info = userinfo_response.json()
+            logger.info(f"카카오 사용자 정보 조회 성공: {user_info.get('id')}")
+
+        # 사용자 정보 추출
+        kakao_account = user_info.get("kakao_account", {})
+        profile = kakao_account.get("profile", {})
+
+        user_id = str(user_info["id"])
+        email = kakao_account.get("email", f"{user_id}@kakao.user")
+        name = profile.get("nickname", "")
+        profile_image = profile.get("profile_image_url", "")
+
+        ip_address, device_info = ip_and_device
+
+        # 기존 소셜 로그인 로직 재사용
+        user, access_token, refresh_token = await process_social_login(
+            provider="kakao",
+            provider_user_id=user_id,
+            email=email,
+            username=f"kakao_{user_id}",
+            name=name,
+            profile_image=profile_image,
+            ip_address=ip_address,
+            device_info=device_info,
+        )
+
+        logger.info(f"카카오 모바일 로그인 완료: {user.username}")
+
+        return {
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer",
+            "user_id": str(user.id),
+            "username": user.username,
+            "email": user.email,
+            "role": user.role,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"카카오 모바일 로그인 오류: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="카카오 로그인 처리 중 오류가 발생했습니다.",
+        )
+
+
 @router.post("/naver", response_model=LoginResponse)
 async def naver_login(
     request: Request,
@@ -211,3 +289,80 @@ async def naver_login(
         "email": user.email,
         "role": user.role,
     }
+
+
+@router.post("/naver/mobile", response_model=LoginResponse)
+async def naver_mobile_login(
+    request: Request,
+    auth_data: NaverMobileLoginRequest,
+    ip_and_device: tuple = Depends(get_user_ip_and_device_info),
+):
+    """모바일 앱용 네이버 로그인 (Access Token 방식)"""
+    try:
+        logger.info(f"네이버 모바일 로그인 시작: {auth_data.access_token[:20]}...")
+
+        # 네이버 사용자 정보 조회
+        async with httpx.AsyncClient() as client:
+            userinfo_url = "https://openapi.naver.com/v1/nid/me"
+            headers = {"Authorization": f"Bearer {auth_data.access_token}"}
+
+            userinfo_response = await client.get(userinfo_url, headers=headers)
+
+            if userinfo_response.status_code != 200:
+                logger.error(f"네이버 사용자 정보 조회 실패: {userinfo_response.text}")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="유효하지 않은 네이버 액세스 토큰입니다.",
+                )
+
+            user_info = userinfo_response.json()
+            logger.info(
+                f"네이버 사용자 정보 조회 성공: {user_info.get('response', {}).get('id')}"
+            )
+
+        # 사용자 정보 추출
+        response = user_info.get("response", {})
+
+        user_id = response.get("id", "")
+        email = response.get("email", f"{user_id}@naver.user")
+        name = response.get("name", "")
+        profile_image = response.get("profile_image", "")
+        nickname = response.get("nickname", "")
+
+        # 이름이 없으면 닉네임 사용
+        display_name = name if name else nickname
+
+        ip_address, device_info = ip_and_device
+
+        # 기존 소셜 로그인 로직 재사용
+        user, access_token, refresh_token = await process_social_login(
+            provider="naver",
+            provider_user_id=user_id,
+            email=email,
+            username=f"naver_{user_id}",
+            name=display_name,
+            profile_image=profile_image,
+            ip_address=ip_address,
+            device_info=device_info,
+        )
+
+        logger.info(f"네이버 모바일 로그인 완료: {user.username}")
+
+        return {
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer",
+            "user_id": str(user.id),
+            "username": user.username,
+            "email": user.email,
+            "role": user.role,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"네이버 모바일 로그인 오류: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="네이버 로그인 처리 중 오류가 발생했습니다.",
+        )

@@ -71,3 +71,11 @@ class UnlockAccountRequest(BaseModel):
 class GoogleMobileLoginRequest(BaseModel):
     id_token: str
     access_token: Optional[str] = None
+
+
+class KakaoMobileLoginRequest(BaseModel):
+    access_token: str
+
+
+class NaverMobileLoginRequest(BaseModel):
+    access_token: str
