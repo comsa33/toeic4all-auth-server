@@ -89,6 +89,7 @@ class UserMeResponse(BaseModel):
     updated_at: Optional[datetime] = None
     last_login: Optional[datetime] = None
     is_active: bool
+    login_provider: str  # 추가된 필드
     # 추가 필드들 (모바일 앱에서 필요한 경우)
     subscription: Optional[Dict] = None
     stats: Optional[Dict] = None

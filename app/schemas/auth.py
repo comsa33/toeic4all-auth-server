@@ -1,6 +1,16 @@
+from enum import Enum
 from typing import Optional
 
 from pydantic import BaseModel, EmailStr, field_validator
+
+
+class LoginProvider(str, Enum):
+    """로그인 제공자 타입"""
+
+    USERNAME = "username"  # 일반 아이디/비밀번호 로그인
+    GOOGLE = "google"  # 구글 소셜 로그인
+    KAKAO = "kakao"  # 카카오 소셜 로그인
+    NAVER = "naver"  # 네이버 소셜 로그인
 
 
 class Token(BaseModel):
@@ -48,6 +58,7 @@ class LoginResponse(BaseModel):
     username: str
     email: str
     role: str
+    login_provider: str  # 추가된 필드
 
 
 class DeleteAccountRequest(BaseModel):

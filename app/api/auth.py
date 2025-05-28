@@ -55,6 +55,7 @@ async def get_current_user_info(
     current_user: Dict = Depends(get_current_user),
 ):
     """현재 로그인된 사용자 정보 조회 (자동 로그인용)"""
+    from app.utils.auth_utils import determine_login_provider
 
     # 사용자 정보를 응답 모델에 맞게 변환
     user_info = {
@@ -67,6 +68,7 @@ async def get_current_user_info(
         "updated_at": current_user.get("updated_at"),
         "last_login": current_user.get("last_login"),
         "is_active": current_user.get("is_active", True),
+        "login_provider": determine_login_provider(current_user),  # 추가된 필드
         # 추가 정보 (모바일 앱에서 필요한 경우)
         "subscription": current_user.get("subscription"),
         "stats": current_user.get("stats"),
@@ -77,14 +79,6 @@ async def get_current_user_info(
     return user_info
 
 
-@router.get("/me/profile", response_model=UserProfileBase)
-async def get_current_user_profile(
-    current_user: Dict = Depends(get_current_user),
-):
-    """현재 사용자의 프로필 정보만 조회"""
-    return current_user.get("profile", {})
-
-
 @router.post("/login", response_model=LoginResponse)
 async def login(
     request: Request,
@@ -92,6 +86,8 @@ async def login(
     ip_and_device: tuple = Depends(get_user_ip_and_device_info),
 ):
     """사용자 로그인 및 토큰 생성"""
+    from app.utils.auth_utils import determine_login_provider
+
     ip_address, device_info = ip_and_device
     user, access_token, refresh_token = await authenticate_user(
         username=login_data.username,
@@ -99,6 +95,14 @@ async def login(
         ip_address=ip_address,
         device_info=device_info,
     )
+
+    # 사용자 정보를 다시 조회하여 최신 정보 획득
+    from bson import ObjectId
+
+    from app.db.mongodb import mongodb
+
+    users_collection = mongodb.get_users_db()
+    user_doc = await users_collection.find_one({"_id": ObjectId(str(user.id))})
 
     return {
         "access_token": access_token,
@@ -108,7 +112,18 @@ async def login(
         "username": user.username,
         "email": user.email,
         "role": user.role,
+        "login_provider": determine_login_provider(
+            user_doc or user.model_dump()
+        ),  # 추가된 필드
     }
+
+
+@router.get("/me/profile", response_model=UserProfileBase)
+async def get_current_user_profile(
+    current_user: Dict = Depends(get_current_user),
+):
+    """현재 사용자의 프로필 정보만 조회"""
+    return current_user.get("profile", {})
 
 
 @router.post("/login/oauth2", response_model=Token)

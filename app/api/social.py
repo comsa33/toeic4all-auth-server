@@ -30,6 +30,8 @@ async def google_login(
     ip_and_device: tuple = Depends(get_user_ip_and_device_info),
 ):
     """Google 소셜 로그인"""
+    from app.utils.auth_utils import get_login_provider_from_social_login
+
     ip_address, device_info = ip_and_device
     user, access_token, refresh_token = await handle_google_login(
         code=code,
@@ -46,6 +48,7 @@ async def google_login(
         "username": user.username,
         "email": user.email,
         "role": user.role,
+        "login_provider": get_login_provider_from_social_login("google"),  # 추가된 필드
     }
 
 
@@ -56,6 +59,8 @@ async def google_mobile_login(
     ip_and_device: tuple = Depends(get_user_ip_and_device_info),
 ):
     """모바일 앱용 구글 로그인 (ID 토큰 방식) - 플랫폼별 클라이언트 ID 지원"""
+    from app.utils.auth_utils import get_login_provider_from_social_login
+
     try:
         # ID Token 형식 검증
         if not auth_data.id_token or len(auth_data.id_token.split(".")) != 3:
@@ -147,6 +152,9 @@ async def google_mobile_login(
             "username": user.username,
             "email": user.email,
             "role": user.role,
+            "login_provider": get_login_provider_from_social_login(
+                "google"
+            ),  # 추가된 필드
         }
 
     except ValueError as ve:
@@ -171,6 +179,8 @@ async def kakao_login(
     ip_and_device: tuple = Depends(get_user_ip_and_device_info),
 ):
     """Kakao 소셜 로그인"""
+    from app.utils.auth_utils import get_login_provider_from_social_login
+
     ip_address, device_info = ip_and_device
     user, access_token, refresh_token = await handle_kakao_login(
         code=code,
@@ -187,6 +197,7 @@ async def kakao_login(
         "username": user.username,
         "email": user.email,
         "role": user.role,
+        "login_provider": get_login_provider_from_social_login("kakao"),  # 추가된 필드
     }
 
 
@@ -197,6 +208,8 @@ async def kakao_mobile_login(
     ip_and_device: tuple = Depends(get_user_ip_and_device_info),
 ):
     """모바일 앱용 카카오 로그인 (Access Token 방식)"""
+    from app.utils.auth_utils import get_login_provider_from_social_login
+
     try:
         logger.info(f"카카오 모바일 로그인 시작: {auth_data.access_token[:20]}...")
 
@@ -250,6 +263,9 @@ async def kakao_mobile_login(
             "username": user.username,
             "email": user.email,
             "role": user.role,
+            "login_provider": get_login_provider_from_social_login(
+                "kakao"
+            ),  # 추가된 필드
         }
 
     except HTTPException:
@@ -271,6 +287,8 @@ async def naver_login(
     ip_and_device: tuple = Depends(get_user_ip_and_device_info),
 ):
     """Naver 소셜 로그인"""
+    from app.utils.auth_utils import get_login_provider_from_social_login
+
     ip_address, device_info = ip_and_device
     user, access_token, refresh_token = await handle_naver_login(
         code=code,
@@ -288,6 +306,7 @@ async def naver_login(
         "username": user.username,
         "email": user.email,
         "role": user.role,
+        "login_provider": get_login_provider_from_social_login("naver"),  # 추가된 필드
     }
 
 
@@ -298,6 +317,8 @@ async def naver_mobile_login(
     ip_and_device: tuple = Depends(get_user_ip_and_device_info),
 ):
     """모바일 앱용 네이버 로그인 (Access Token 방식)"""
+    from app.utils.auth_utils import get_login_provider_from_social_login
+
     try:
         logger.info(f"네이버 모바일 로그인 시작: {auth_data.access_token[:20]}...")
 
@@ -356,6 +377,9 @@ async def naver_mobile_login(
             "username": user.username,
             "email": user.email,
             "role": user.role,
+            "login_provider": get_login_provider_from_social_login(
+                "naver"
+            ),  # 추가된 필드
         }
 
     except HTTPException:
